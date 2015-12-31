@@ -39,12 +39,13 @@ public class JsonBinder {
 		mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 		mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
 	}
-	public JsonBinder(JsonInclude.Include inclusion,boolean isTyping) {
+
+	public JsonBinder(JsonInclude.Include inclusion, boolean isTyping) {
 		mapper = new ObjectMapper();
 		mapper.setSerializationInclusion(inclusion);
-		if(isTyping){
+		if (isTyping) {
 			mapper.enableDefaultTyping();
-		}else{
+		} else {
 			mapper.disableDefaultTyping();
 		}
 		mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);
@@ -59,11 +60,12 @@ public class JsonBinder {
 	public static JsonBinder buildNormalBinder() {
 		return new JsonBinder(JsonInclude.Include.ALWAYS);
 	}
+
 	/**
 	 * 创建输出全部属性到Json字符串的Binder.
 	 */
 	public static JsonBinder buildNormalBinder(boolean isTyping) {
-		return new JsonBinder(JsonInclude.Include.ALWAYS,isTyping);
+		return new JsonBinder(JsonInclude.Include.ALWAYS, isTyping);
 	}
 
 	/**
@@ -72,11 +74,12 @@ public class JsonBinder {
 	public static JsonBinder buildNonNullBinder() {
 		return new JsonBinder(JsonInclude.Include.NON_NULL);
 	}
+
 	/**
 	 * 创建只输出非空属性到Json字符串的Binder.
 	 */
 	public static JsonBinder buildNonNullBinder(boolean isTyping) {
-		return new JsonBinder(JsonInclude.Include.NON_NULL,isTyping);
+		return new JsonBinder(JsonInclude.Include.NON_NULL, isTyping);
 	}
 
 	/**
@@ -85,19 +88,19 @@ public class JsonBinder {
 	public static JsonBinder buildNonDefaultBinder() {
 		return new JsonBinder(JsonInclude.Include.NON_DEFAULT);
 	}
-	
+
 	/**
 	 * 创建只输出初始值被改变的属性到Json字符串的Binder.
 	 */
 	public static JsonBinder buildNonDefaultBinder(boolean isTyping) {
-		return new JsonBinder(JsonInclude.Include.NON_DEFAULT,isTyping);
+		return new JsonBinder(JsonInclude.Include.NON_DEFAULT, isTyping);
 	}
 
 	/**
 	 * 如果JSON字符串为Null或"null"字符串,返回Null. 如果JSON字符串为"[]",返回空集合.
 	 * 
-	 * 如需读取集合如List/Map,且不是List&lt;String&gt;这种简单类型时使用如下语句: List&lt;MyBean&gt; beanList =
-	 * binder.getMapper().readValue(listString, new
+	 * 如需读取集合如List/Map,且不是List&lt;String&gt;这种简单类型时使用如下语句: List&lt;MyBean&gt;
+	 * beanList = binder.getMapper().readValue(listString, new
 	 * TypeReference&lt;List&lt;MyBean&gt;&gt;() {});
 	 */
 	public <T> T fromJson(String jsonString, Class<T> clazz) {
@@ -112,9 +115,10 @@ public class JsonBinder {
 			throw new RuntimeException("JSON格式错误");
 		}
 	}
-	
+
 	/**
 	 * 支持带泛型的JSON类型转换
+	 * 
 	 * @param jsonString
 	 * @param clazz
 	 * @param javaType
@@ -123,28 +127,34 @@ public class JsonBinder {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	public <T> T fromJson(String jsonString, Class<T> clazz,JavaType javaType)throws Exception{
+	public <T> T fromJson(String jsonString, Class<T> clazz, JavaType javaType)
+			throws Exception {
 		if (jsonString == null || jsonString.isEmpty()) {
 			return null;
 		}
 
 		try {
-			return (T)mapper.readValue(jsonString, javaType);
+			return (T) mapper.readValue(jsonString, javaType);
 		} catch (IOException e) {
-			logger.warn("parse json string error:" + jsonString+e.getMessage());
+			logger.warn("parse json string error:" + jsonString
+					+ e.getMessage());
 			throw e;
 		}
 	}
+
 	/**
 	 * 生成泛型包装类
+	 * 
 	 * @param collectionClass
 	 * @param elementClasses
 	 * @author yaming.xu
 	 * @since 1.1.6
 	 * @return
 	 */
-	public JavaType getCollectionType(Class<?> collectionClass, Class<?>... elementClasses){
-		return mapper.getTypeFactory().constructParametricType(collectionClass, elementClasses);   
+	public JavaType getCollectionType(Class<?> collectionClass,
+			Class<?>... elementClasses) {
+		return mapper.getTypeFactory().constructParametrizedType(
+				collectionClass, collectionClass, elementClasses);
 	}
 
 	/**
