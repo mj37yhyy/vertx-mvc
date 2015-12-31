@@ -1,6 +1,7 @@
 package org.mermaid.vertxmvc;
 
 import io.vertx.rxjava.core.Vertx;
+import io.vertx.rxjava.core.eventbus.EventBus;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,8 +14,8 @@ import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mermaid.vertxmvc.annotation.Controller;
+import org.mermaid.vertxmvc.annotation.Observable;
 import org.mermaid.vertxmvc.annotation.RequestMapping;
-import org.mermaid.vertxmvc.annotation.Service;
 import org.mermaid.vertxmvc.classreading.ClassScanner;
 import org.mermaid.vertxmvc.classreading.Metadata;
 import org.mermaid.vertxmvc.classreading.MetadataReader;
@@ -69,9 +70,9 @@ public class Container {
 	private void mapping(Resource resource) {
 		try {
 			Metadata metadata = metadataReader.getMetadataReader(resource);
-			// 如果是 Controller
 			if (metadata.getAnnotationMetadata().hasAnnotation(
 					Controller.class.getName())) {
+				// 如果是 Controller
 				// 映射路径和方法
 				Class<?> controllerClass = loadClass(metadata);
 				Method[] methods = controllerClass.getMethods();
@@ -90,23 +91,51 @@ public class Container {
 							instance = controllerObjectMap.get(controllerClass
 									.getName());
 						}
-						
+
+						// 将方法和对象实例存入map
+						Map<Method, Object> mMap = new HashMap<Method, Object>();
+						mMap.put(method, instance);
+
+						// 插入映射实例
 						String[] paths = requestMappings[0].value();
 						if (paths.length > 0) {// 如果有设定路径，则映射
 							for (String path : paths) {
-								controllerMapingMap.put(path, method);
+								controllerMapingMap.put(path, mMap);
 							}
 						} else {// 如果不填写路径，则以方法名做为路径
 							controllerMapingMap.put("/" + method.getName(),
-									method);
+									mMap);
 						}// else
 					}// if
 				}// for
 			}// if
-				// 如果是Service
-			else if (metadata.getAnnotationMetadata().hasAnnotation(
-					Service.class.getName())) {
-				Class<?> clazz = loadClass(metadata);
+			else {
+				Class<?> observableClass = loadClass(metadata);
+				for (Method method : observableClass.getMethods()) {
+					if (method.isAnnotationPresent(Observable.class)) {// 如果包含Observable
+						Object instance;
+						// 生成对象
+						if (!observableObjectMap.containsKey(metadata
+								.getClassMetadata().getClassName())) {
+							instance = observableClass.newInstance();
+							observableObjectMap.put(metadata.getClassMetadata()
+									.getClassName(), instance);
+						} else {
+							instance = observableObjectMap.get(metadata
+									.getClassMetadata().getClassName());
+						}
+
+						observableMap.put(metadata.getClassMetadata()
+								.getClassName() + ":" + method.getName(),
+								new HashMap<Method, Object>() {
+									private static final long serialVersionUID = -8226388923218435763L;
+
+									{
+										put(method, instance);
+									}
+								});
+					}
+				}
 
 			}
 			logger.info(metadata.getClassMetadata().getClassName());
@@ -133,8 +162,15 @@ public class Container {
 
 	private Logger logger = LogManager.getLogger(getClass());
 	private JsonBinder binder = JsonBinder.buildNonDefaultBinder();
+
 	private MetadataReader metadataReader = new MetadataReader();
 	static Config config = null;
+
+	static final Map<String, Object> observableObjectMap = new HashMap<String, Object>();
+	static final Map<String, Map<Method, Object>> observableMap = new HashMap<String, Map<Method, Object>>();
+
 	static final Map<String, Object> controllerObjectMap = new HashMap<String, Object>();
-	static final Map<String, Method> controllerMapingMap = new HashMap<String, Method>();
+	static final Map<String, Map<Method, Object>> controllerMapingMap = new HashMap<String, Map<Method, Object>>();
+
+	static EventBus eventBus = null;
 }

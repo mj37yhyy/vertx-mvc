@@ -6,7 +6,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.TypePath;
 
 public class AnnotationMetadataReadingVisitor extends
 		ClassMetadataReadingVisitor implements AnnotationMetadata {
@@ -20,7 +22,12 @@ public class AnnotationMetadataReadingVisitor extends
 	public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
 		String className = Type.getType(desc).getClassName();
 		this.annotationSet.add(className);
-		return new AnnotationAttributesReadingVisitor();
+		return super.visitAnnotation(desc, visible);
+	}
+
+	public MethodVisitor visitMethod(int access, String name, String desc,
+			String signature, String[] exceptions) {
+		return super.visitMethod(access, name, desc, signature, exceptions);
 	}
 
 	@Override

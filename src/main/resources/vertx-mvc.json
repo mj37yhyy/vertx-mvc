@@ -3,6 +3,6 @@
         "port":"8080"
     },
     "scaner":{
-    	"basePath":"org"
+    	"basePath":"org.mermaid.vertxmvc"
     }
 }
