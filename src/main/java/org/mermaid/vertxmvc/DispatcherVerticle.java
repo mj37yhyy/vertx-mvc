@@ -79,7 +79,8 @@ public class DispatcherVerticle extends AbstractVerticle {
 					Object re = method.invoke(object,
 							args.toArray(new Object[0]));
 					if (re != null) {// 返回值序列化成json
-						response.putHeader("content-type", "text/plain");
+						response.putHeader("content-type",
+								"text/plain;charset=utf-8");
 						response.end(binder.toJson(re));
 					}
 				} catch (Exception e) {
@@ -87,7 +88,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 				}
 			});
 		} else {
-			response.putHeader("content-type", "text/plain");
+			response.putHeader("content-type", "text/plain;charset=utf-8");
 			response.end("404");
 		}
 
