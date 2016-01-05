@@ -1,5 +1,7 @@
 package org.mermaid.vertxmvc;
 
+import org.mermaid.vertxmvc.utils.JsonBinder;
+
 public class EvnetBusHelper {
 
 	/**
@@ -16,7 +18,8 @@ public class EvnetBusHelper {
 	 */
 	public static <T> void send(String className, String methodName,
 			Object msg, ReturnHandler<T> returnHandler) {
-		Container.eventBus.<T> send(className + ":" + methodName, msg, ar -> {
+		JsonBinder binder = JsonBinder.buildNonDefaultBinder();
+		Container.eventBus.<T> send(className + ":" + methodName, binder.toJson(msg), ar -> {
 			if (ar.succeeded()) {
 				returnHandler.handler(ar.result().body());
 			}
@@ -67,4 +70,5 @@ public class EvnetBusHelper {
 	public interface ReturnHandler<T> {
 		public void handler(T t);
 	}
+	
 }
