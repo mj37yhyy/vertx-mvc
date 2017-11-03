@@ -1,7 +1,6 @@
 package org.mermaid.vertxmvc;
 
 import io.vertx.rxjava.core.AbstractVerticle;
-import io.vertx.rxjava.core.MultiMap;
 import io.vertx.rxjava.core.eventbus.Message;
 import io.vertx.rxjava.core.eventbus.MessageConsumer;
 import io.vertx.rxjava.core.http.HttpServer;
@@ -15,9 +14,10 @@ import org.apache.logging.log4j.Logger;
 import org.mermaid.vertxmvc.utils.JsonBinder;
 import rx.Observable;
 
-import java.lang.reflect.Method;
-import java.util.*;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class DispatcherVerticle extends AbstractVerticle {
@@ -26,7 +26,8 @@ public class DispatcherVerticle extends AbstractVerticle {
 		Container.eventBus = vertx.eventBus();
 		HttpServer server = vertx.createHttpServer();
 		Router router = Router.router(vertx);
-		router.route().handler(this::dispatcher);
+		this.dispatcher(router);
+		// router.route().handler(this::dispatcher);
 		this.initBus();// 初始化所有bus
 		server.requestHandler(router::accept).listen(
 				Container.config.getServer().getPort());
@@ -35,27 +36,43 @@ public class DispatcherVerticle extends AbstractVerticle {
 	/**
 	 * 调用
 	 *
-	 * @param routingContext
+	 * @param router
 	 */
-	private void dispatcher(RoutingContext routingContext) {
-		logger.debug("开始");
+	private void dispatcher(Router router) {
+
+		Set<String> set = Container.controllerMapingMap.keySet();
+		for (String path : set) {
+
+			//@TODO 修改为可配置类型，以支持正则表达式。
+			//@TODO 添加http方法的选项
+			if (path.contains(".*")) {
+				router.routeWithRegex(path).handler(
+						routingContext -> dispatcher(path, routingContext));
+			} else {
+				router.route(path).handler(
+						routingContext -> dispatcher(path, routingContext));
+			}
+		}
+
+		// 兜底结束
+		router.route()
+				.handler(routingContext -> routingContext.response()
+						.setStatusCode(404).end());
+	}
+
+	private void dispatcher(String path, RoutingContext routingContext) {
 		HttpServerRequest request = routingContext.request();
 		HttpServerResponse response = routingContext.response();
 		response.putHeader("content-type", "text/plain;charset=utf-8");
 
-		MultiMap mparams = request.params();
-		Map<String, String> params = ((io.vertx.core.MultiMap) mparams
-				.getDelegate()).entries().stream()
-						.collect(Collectors.toMap(x -> x.getKey(),
-								x -> x.getValue()));
+		Map<String, String> params = request
+				.params()
+				.getDelegate().entries().stream()
+						.collect(Collectors.toMap(Map.Entry::getKey,
+								Map.Entry::getValue));
 
-		Set<String> set = Container.controllerMapingMap.keySet();
-		for (String path : set) {
-			// 正则匹配，只选先匹配到的
-			if (Pattern.compile(path).matcher(request.path()).matches()) {
-				Map<Method, Object> maping = Container.controllerMapingMap
-						.get(path);
-				maping.forEach((method, object) -> {
+		Container.controllerMapingMap
+				.get(path).forEach((method, object) -> {
 					try {
 						List<Object> args = new ArrayList<Object>();
 						for (Class<?> pc : method.getParameterTypes()) {
@@ -75,28 +92,62 @@ public class DispatcherVerticle extends AbstractVerticle {
 								args.add(pco);
 							}
 						}
-						Object re = null;
+						Object re;
 						try {
 							// 调用Controller方法
 							re = method.invoke(object,
 									args.toArray(new Object[0]));
+							response.end(binder.toJson(re));
 						} catch (Exception e) {// 如果发生错误
 							logger.error(e.getMessage(), e);
-							re = "{\"error\":\"" + e.getMessage() + "\"}";
-						}
-						if (re != null) {// 返回值序列化成json
-							response.end(binder.toJson(re));
+							re = "{\"error\":\"" + e.getMessage()
+									+ "\"}";
+							response.setStatusCode(500)
+									.end(binder.toJson(re));
 						}
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
 				});
-				break;
-			}
-		}
 
-		logger.debug("结束");
+		// routingContext.next();
 	}
+
+	/**
+	 * 调用
+	 *
+	 * @param routingContext
+	 */
+	/*
+	 * private void dispatcher(RoutingContext routingContext) {
+	 * logger.debug("开始"); HttpServerRequest request = routingContext.request();
+	 * HttpServerResponse response = routingContext.response();
+	 * response.putHeader("content-type", "text/plain;charset=utf-8");
+	 * 
+	 * MultiMap mparams = request.params(); Map<String, String> params =
+	 * ((io.vertx.core.MultiMap) mparams .getDelegate()).entries().stream()
+	 * .collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue()));
+	 * 
+	 * Set<String> set = Container.controllerMapingMap.keySet(); for (String
+	 * path : set) { // 正则匹配，只选先匹配到的 if
+	 * (Pattern.compile(path).matcher(request.path()).matches()) { Map<Method,
+	 * Object> maping = Container.controllerMapingMap .get(path);
+	 * maping.forEach((method, object) -> { try { List<Object> args = new
+	 * ArrayList<Object>(); for (Class<?> pc : method.getParameterTypes()) { if
+	 * (pc.isInstance(request)) {// 如果是request，直接赋值 args.add(request); } else if
+	 * (pc.isInstance(response)) {// 如果是response，直接赋值 args.add(response); } else
+	 * if (pc.isInstance(params)) {// 如果是map，直接赋值 args.add(params); } else {//
+	 * 如果是javabean,进行转换 Object pco = pc.newInstance(); try {
+	 * BeanUtils.populate(pco, params); } catch (IllegalAccessException e) {
+	 * logger.error("无法赋值"); } args.add(pco); } } Object re = null; try { //
+	 * 调用Controller方法 re = method.invoke(object, args.toArray(new Object[0])); }
+	 * catch (Exception e) {// 如果发生错误 logger.error(e.getMessage(), e); re =
+	 * "{\"error\":\"" + e.getMessage() + "\"}"; } if (re != null) {//
+	 * 返回值序列化成json response.end(binder.toJson(re)); } } catch (Exception e) {
+	 * e.printStackTrace(); } }); break; } }
+	 * 
+	 * logger.debug("结束"); }
+	 */
 
 	/**
 	 * 初始化Bus
