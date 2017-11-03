@@ -2,7 +2,6 @@ package org.mermaid.vertxmvc;
 
 import io.vertx.rxjava.core.AbstractVerticle;
 import io.vertx.rxjava.core.MultiMap;
-import io.vertx.rxjava.core.buffer.Buffer;
 import io.vertx.rxjava.core.eventbus.Message;
 import io.vertx.rxjava.core.eventbus.MessageConsumer;
 import io.vertx.rxjava.core.http.HttpServer;
@@ -15,13 +14,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mermaid.vertxmvc.utils.JsonBinder;
 import rx.Observable;
-import rx.Subscription;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class DispatcherVerticle extends AbstractVerticle {
@@ -52,45 +50,54 @@ public class DispatcherVerticle extends AbstractVerticle {
 						.collect(Collectors.toMap(x -> x.getKey(),
 								x -> x.getValue()));
 
-		if (Container.controllerMapingMap.containsKey(request.path())) {// 精确匹配（后期再做其它）
-			Map<Method, Object> maping = Container.controllerMapingMap
-					.get(request.path());
-			maping.forEach((method, object) -> {
-				try {
-					List<Object> args = new ArrayList<Object>();
-					for (Class<?> pc : method.getParameterTypes()) {
-						if (pc.isInstance(request)) {// 如果是request，直接赋值
-							args.add(request);
-						} else if (pc.isInstance(response)) {// 如果是response，直接赋值
-							args.add(response);
-						} else if (pc.isInstance(params)) {// 如果是map，直接赋值
-							args.add(params);
-						} else {// 如果是javabean,进行转换
-							Object pco = pc.newInstance();
-							try {
-								BeanUtils.populate(pco, params);
-							} catch (IllegalAccessException e) {
-								logger.error("无法赋值");
+		Container.controllerMapingMap.keySet().forEach(path -> {
+			// 正则匹配，只选先匹配到的
+			if (Pattern.compile(path).matcher(request.path()).matches()) {
+				Map<Method, Object> maping = Container.controllerMapingMap
+						.get(path);
+				maping.forEach((method, object) -> {
+					try {
+						List<Object> args = new ArrayList<Object>();
+						for (Class<?> pc : method.getParameterTypes()) {
+							if (pc.isInstance(request)) {// 如果是request，直接赋值
+								args.add(request);
+							} else if (pc.isInstance(response)) {// 如果是response，直接赋值
+								args.add(response);
+							} else if (pc.isInstance(params)) {// 如果是map，直接赋值
+								args.add(params);
+							} else {// 如果是javabean,进行转换
+								Object pco = pc.newInstance();
+								try {
+									BeanUtils.populate(pco, params);
+								} catch (IllegalAccessException e) {
+									logger.error("无法赋值");
+								}
+								args.add(pco);
 							}
-							args.add(pco);
 						}
+						Object re = null;
+						try {
+							// 调用Controller方法
+							re = method.invoke(object,
+									args.toArray(new Object[0]));
+						} catch (Exception e) {// 如果发生错误
+							re = "{\"error\":\"" + e.getMessage() + "\"}";
+						}
+						if (re != null) {// 返回值序列化成json
+							response.putHeader("content-type",
+									"text/plain;charset=utf-8");
+							response.end(binder.toJson(re));
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
 					}
-					// 调用Controller方法
-					Object re = method.invoke(object,
-							args.toArray(new Object[0]));
-					if (re != null) {// 返回值序列化成json
-						response.putHeader("content-type",
-								"text/plain;charset=utf-8");
-						response.end(binder.toJson(re));
-					}
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			});
-		} else {
-			response.putHeader("content-type", "text/plain;charset=utf-8");
-			response.end("404");
-		}
+				});
+				return;// 如果匹配上则退出。不再匹配
+			} else {
+				response.putHeader("content-type", "text/plain;charset=utf-8");
+				response.end("404");
+			}
+		});
 
 		logger.debug("结束");
 	}
@@ -101,15 +108,34 @@ public class DispatcherVerticle extends AbstractVerticle {
 	private void initBus() {
 		Container.observableMap.forEach((key, value) -> {
 			MessageConsumer<Object> consumer = Container.eventBus
-					.<Object> consumer(key);
+					.consumer(key);
 			Observable<Message<Object>> observable = consumer.toObservable();
-			Subscription sub = observable.subscribe(msg -> {
+			observable.subscribe(msg -> {
 				value.forEach((method, object) -> {
 					try {
-						Buffer buff = Buffer.buffer();
-						msg.reply(binder
-								.toJson(method.invoke(object, binder.fromJson(
-										(String) msg.body(), HashMap.class))));
+						if (method.getParameterTypes() == null
+								|| method.getParameterTypes().length == 0) {// 直接用方法的入参类型进行转换
+							msg.reply(binder
+									.toJson(method.invoke(object,
+											(Object) null)));
+						} else if (method.getParameterTypes() != null
+								&& method.getParameterTypes().length == 1) {// 直接用方法的入参类型进行转换，支持一个参数
+							Class<?> pc = method.getParameterTypes()[0];
+							if (pc.isInterface())
+								logger.error("Observable:{}的入参不能是Interface",
+										method.getDeclaringClass() + ":"
+												+ method.getName());
+							else
+								msg.reply(binder
+										.toJson(method.invoke(object,
+												binder.fromJson(
+														(String) msg.body(),
+														pc))));
+						} else {
+							logger.error("Observable:{}的入参只支持0~1个",
+									method.getDeclaringClass() + ":"
+											+ method.getName());
+						}
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
