@@ -7,9 +7,9 @@ import java.util.Map;
 public class TestService {
 
 	@Observable
-	public String test(Map msg) {
+	public Map test(Map msg) {
 		System.out.println("------------TestService--------------");
-		return "you say:" + msg;
+		return msg;
 	}
 
 }

@@ -1,25 +1,18 @@
 package org.mermaid.vertxmvc;
 
-import java.io.IOException;
-import java.net.URL;
-import java.util.Enumeration;
+import org.mermaid.vertxmvc.utils.JsonBinder;
+
+import java.util.HashMap;
 
 
 public class Test {
 	
 
 	@org.junit.Test
-	public  void test() {
-		Enumeration<URL> resourceUrls = null;
-		try {
-			resourceUrls = getClass().getClassLoader().getResources("org/mermaid/vertxmvc");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		while (resourceUrls.hasMoreElements()) {
-			URL url = resourceUrls.nextElement();
-			System.out.println(url);
-		}
+	public  void test() throws Exception {
+		JsonBinder binder = JsonBinder.buildNormalBinder();
+
+		System.out.println(binder.fromJson("{\"a\":\"2\",\"b\":\"3\"}", HashMap.class));
 
 	}
 

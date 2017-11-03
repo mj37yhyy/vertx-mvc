@@ -18,7 +18,7 @@ public class EventBusHelper {
 	 */
 	public static <T> void send(String className, String methodName,
 			Object msg, ReturnHandler<T> returnHandler) {
-		JsonBinder binder = JsonBinder.buildNonDefaultBinder();
+		JsonBinder binder = JsonBinder.buildNormalBinder();
 		Container.eventBus.<T> send(className + ":" + methodName, binder.toJson(msg), ar -> {
 			if (ar.succeeded()) {
 				returnHandler.handler(ar.result().body());

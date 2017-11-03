@@ -10,20 +10,19 @@ import io.vertx.rxjava.core.http.HttpServerRequest;
 import io.vertx.rxjava.core.http.HttpServerResponse;
 import io.vertx.rxjava.ext.web.Router;
 import io.vertx.rxjava.ext.web.RoutingContext;
-
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mermaid.vertxmvc.utils.JsonBinder;
-
 import rx.Observable;
 import rx.Subscription;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class DispatcherVerticle extends AbstractVerticle {
 
@@ -39,18 +38,19 @@ public class DispatcherVerticle extends AbstractVerticle {
 
 	/**
 	 * 调用
-	 * 
+	 *
 	 * @param routingContext
 	 */
 	private void dispatcher(RoutingContext routingContext) {
-		logger.info("开始");
+		logger.debug("开始");
 		HttpServerRequest request = routingContext.request();
 		HttpServerResponse response = routingContext.response();
 
 		MultiMap mparams = request.params();
 		Map<String, String> params = ((io.vertx.core.MultiMap) mparams
 				.getDelegate()).entries().stream()
-				.collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue()));
+						.collect(Collectors.toMap(x -> x.getKey(),
+								x -> x.getValue()));
 
 		if (Container.controllerMapingMap.containsKey(request.path())) {// 精确匹配（后期再做其它）
 			Map<Method, Object> maping = Container.controllerMapingMap
@@ -92,7 +92,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 			response.end("404");
 		}
 
-		logger.info("结束");
+		logger.debug("结束");
 	}
 
 	/**
@@ -107,7 +107,9 @@ public class DispatcherVerticle extends AbstractVerticle {
 				value.forEach((method, object) -> {
 					try {
 						Buffer buff = Buffer.buffer();
-						msg.reply(method.invoke(object, msg.body()));
+						msg.reply(binder
+								.toJson(method.invoke(object, binder.fromJson(
+										(String) msg.body(), HashMap.class))));
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
@@ -116,6 +118,6 @@ public class DispatcherVerticle extends AbstractVerticle {
 		});
 	}
 
-	private JsonBinder binder = JsonBinder.buildNonDefaultBinder();
+	private JsonBinder binder = JsonBinder.buildNormalBinder();
 	private Logger logger = LogManager.getLogger(getClass());
 }
