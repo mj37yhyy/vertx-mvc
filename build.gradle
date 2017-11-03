@@ -1,0 +1,74 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+
+group = 'org.mermaid'
+version = '0.0.1-SNAPSHOT'
+def artifactId = "vertx-mvc"
+
+description = """vertx-mvc"""
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+
+ext {
+    updateType = System.getProperty("ut") ?: "maven-snapshots"//or "maven-releases"
+    mavenUser = System.getProperty("mu") ?: "miaojia"
+    mavenPassword = System.getProperty("mp") ?: "msean3742"
+}
+
+repositories {
+    maven {
+        url "https://10.69.32.99:8443/repository/maven-public/"
+    }
+    mavenCentral()
+}
+
+dependencies {
+    compile group: 'io.vertx', name: 'vertx-web', version: '3.5.0'
+    compile group: 'io.vertx', name: 'vertx-rx-java', version: '3.5.0'
+    compile group: 'io.reactivex', name: 'rxjava', version: '1.1.0'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.9.1'
+    compile group: 'commons-io', name: 'commons-io', version: '2.4'
+    compile group: 'com.thoughtworks.xstream', name: 'xstream', version: '1.4.8'
+    compile group: 'org.ow2.asm', name: 'asm', version: '5.2'
+    compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.2'
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}
+
+//打包源代码
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives sourcesJar
+}
+//如果希望gradle install，安装到.m2本地仓库，参考下面的内容
+install {
+    repositories.mavenInstaller {
+        pom.version = "$project.version"
+        pom.artifactId = "$artifactId"
+        pom.groupId = "$project.group"
+    }
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: "https://10.69.32.99:8443/repository/$updateType/") {
+                authentication(userName: "$mavenUser", password: "$mavenPassword")
+            }
+            pom.version = "$project.version"
+            pom.artifactId = "$artifactId"
+            pom.groupId = "$project.group"
+        }
+    }
+}
