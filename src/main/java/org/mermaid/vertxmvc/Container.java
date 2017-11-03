@@ -2,14 +2,6 @@ package org.mermaid.vertxmvc;
 
 import io.vertx.rxjava.core.Vertx;
 import io.vertx.rxjava.core.eventbus.EventBus;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,6 +14,13 @@ import org.mermaid.vertxmvc.classreading.MetadataReader;
 import org.mermaid.vertxmvc.classreading.Resource;
 import org.mermaid.vertxmvc.config.Config;
 import org.mermaid.vertxmvc.utils.JsonBinder;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 public class Container {
 
@@ -161,7 +160,7 @@ public class Container {
 	}
 
 	private Logger logger = LogManager.getLogger(getClass());
-	private JsonBinder binder = JsonBinder.buildNonDefaultBinder();
+	private JsonBinder binder = JsonBinder.buildNormalBinder();
 
 	private MetadataReader metadataReader = new MetadataReader();
 	static Config config = null;
