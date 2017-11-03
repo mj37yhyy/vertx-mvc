@@ -16,9 +16,7 @@ import org.mermaid.vertxmvc.utils.JsonBinder;
 import rx.Observable;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -43,6 +41,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 		logger.debug("开始");
 		HttpServerRequest request = routingContext.request();
 		HttpServerResponse response = routingContext.response();
+		response.putHeader("content-type", "text/plain;charset=utf-8");
 
 		MultiMap mparams = request.params();
 		Map<String, String> params = ((io.vertx.core.MultiMap) mparams
@@ -50,7 +49,8 @@ public class DispatcherVerticle extends AbstractVerticle {
 						.collect(Collectors.toMap(x -> x.getKey(),
 								x -> x.getValue()));
 
-		Container.controllerMapingMap.keySet().forEach(path -> {
+		Set<String> set = Container.controllerMapingMap.keySet();
+		for (String path : set) {
 			// 正则匹配，只选先匹配到的
 			if (Pattern.compile(path).matcher(request.path()).matches()) {
 				Map<Method, Object> maping = Container.controllerMapingMap
@@ -81,23 +81,19 @@ public class DispatcherVerticle extends AbstractVerticle {
 							re = method.invoke(object,
 									args.toArray(new Object[0]));
 						} catch (Exception e) {// 如果发生错误
+							logger.error(e.getMessage(), e);
 							re = "{\"error\":\"" + e.getMessage() + "\"}";
 						}
 						if (re != null) {// 返回值序列化成json
-							response.putHeader("content-type",
-									"text/plain;charset=utf-8");
 							response.end(binder.toJson(re));
 						}
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
 				});
-				return;// 如果匹配上则退出。不再匹配
-			} else {
-				response.putHeader("content-type", "text/plain;charset=utf-8");
-				response.end("404");
+				break;
 			}
-		});
+		}
 
 		logger.debug("结束");
 	}
