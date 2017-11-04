@@ -28,19 +28,19 @@ public class DispatcherVerticle extends AbstractVerticle {
 		Container.eventBus = vertx.eventBus();
 		HttpServer server = vertx.createHttpServer();
 		Router router = Router.router(vertx);
-		this.dispatcher(router);
+		this.initController(router);
 		this.initBus();// 初始化所有bus
 		server.requestHandler(router::accept).listen(
 				Container.config.getServer().getPort());
 	}
 
 	/**
-	 * 调用
+	 * 初始化控制器
 	 *
 	 * @param router
 	 *            Router
 	 */
-	private void dispatcher(Router router) {
+	private void initController(Router router) {
 
 		Set<RequestMapping> set = Container.controllerMappingMap.keySet();
 		for (RequestMapping requestMapping : set) {
@@ -51,14 +51,14 @@ public class DispatcherVerticle extends AbstractVerticle {
 					&& requestMapping.routeWithRegex().equals("")) {
 
 				route = router.route().pathRegex(requestMapping.pathRegex());
-				this.dispatcher(requestMapping, route);
+				this.initController(requestMapping, route);
 			}
 			// 路由正则表达式
 			else if (requestMapping.pathRegex().equals("")
 					&& !requestMapping.routeWithRegex().equals("")) {
 
 				route = router.routeWithRegex(requestMapping.routeWithRegex());
-				this.dispatcher(requestMapping, route);
+				this.initController(requestMapping, route);
 			}
 			// 路径正则表达式 + 路由正则表达式
 			else if (!requestMapping.pathRegex().equals("")
@@ -66,13 +66,13 @@ public class DispatcherVerticle extends AbstractVerticle {
 
 				route = router.routeWithRegex(requestMapping.routeWithRegex())
 						.pathRegex(requestMapping.pathRegex());
-				this.dispatcher(requestMapping, route);
+				this.initController(requestMapping, route);
 			}
 			// 普通路径
 			else {
 				for (String path : requestMapping.value()) {
 					route = router.route(path);
-					this.dispatcher(requestMapping, route);
+					this.initController(requestMapping, route);
 				}
 			}
 		}
@@ -84,14 +84,14 @@ public class DispatcherVerticle extends AbstractVerticle {
 	}
 
 	/**
-	 * 通用dispatcher
+	 * 初始化控制器
 	 * 
 	 * @param requestMapping
 	 *            RequestMapping
 	 * @param route
 	 *            Route
 	 */
-	private void dispatcher(RequestMapping requestMapping, Route route) {
+	private void initController(RequestMapping requestMapping, Route route) {
 
 		// http 方法
 		if (requestMapping.method().length > 0) {
