@@ -16,6 +16,7 @@ import org.mermaid.vertxmvc.annotation.RequestMapping;
 import org.mermaid.vertxmvc.utils.JsonBinder;
 import rx.Observable;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -148,13 +149,22 @@ public class DispatcherVerticle extends AbstractVerticle {
 												args.toArray(new Object[0]));
 										if (result != null)
 											response.end(binder.toJson(result));
-									} catch (Exception e) {// 如果发生错误
+									} catch (InvocationTargetException e) {// 如果发生错误
+										logger.error(e.getCause().getMessage(),
+												e.getCause());
+										result = "{\"error\":\""
+												+ e.getCause().getMessage()
+												+ "\"}";
+										response.setStatusCode(500)
+												.end(binder.toJson(result));
+									} catch (Throwable e) {
 										logger.error(e.getMessage(), e);
 										result = "{\"error\":\""
 												+ e.getMessage()
 												+ "\"}";
 										response.setStatusCode(500)
 												.end(binder.toJson(result));
+
 									}
 								} catch (Exception e) {
 									e.printStackTrace();
