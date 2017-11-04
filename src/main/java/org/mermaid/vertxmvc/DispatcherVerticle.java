@@ -106,6 +106,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 					response.putHeader("content-type",
 							"text/plain;charset=utf-8");
 
+					// request.params() 转换成 Map
 					Map<String, String> params = request
 							.params()
 							.getDelegate().entries().stream()
@@ -116,36 +117,44 @@ public class DispatcherVerticle extends AbstractVerticle {
 							.get(requestMapping).forEach((method, instance) -> {
 								try {
 									List<Object> args = new ArrayList<Object>();
-									for (Class<?> pc : method
+									for (Class<?> parameterTypeClass : method
 											.getParameterTypes()) {
-										if (pc.isInstance(request)) {// 如果是request，直接赋值
+										if (parameterTypeClass
+												.isInstance(request)) {// 如果是request，直接赋值
 											args.add(request);
-										} else if (pc.isInstance(response)) {// 如果是response，直接赋值
+										} else if (parameterTypeClass
+												.isInstance(response)) {// 如果是response，直接赋值
 											args.add(response);
-										} else if (pc.isInstance(params)) {// 如果是map，直接赋值
+										} else if (parameterTypeClass
+												.isInstance(params)) {// 如果是map，直接赋值
 											args.add(params);
 										} else {// 如果是javabean,进行转换
-											Object pco = pc.newInstance();
+											Object parameterTypeInstance = parameterTypeClass
+													.newInstance();
 											try {
-												BeanUtils.populate(pco, params);
+												BeanUtils.populate(
+														parameterTypeInstance,
+														params);
 											} catch (IllegalAccessException e) {
 												logger.error("无法赋值");
 											}
-											args.add(pco);
+											args.add(parameterTypeInstance);
 										}
 									}
-									Object re;
+									Object result;
 									try {
 										// 调用Controller方法
-										re = method.invoke(instance,
+										result = method.invoke(instance,
 												args.toArray(new Object[0]));
-										response.end(binder.toJson(re));
+										if (result != null)
+											response.end(binder.toJson(result));
 									} catch (Exception e) {// 如果发生错误
 										logger.error(e.getMessage(), e);
-										re = "{\"error\":\"" + e.getMessage()
+										result = "{\"error\":\""
+												+ e.getMessage()
 												+ "\"}";
 										response.setStatusCode(500)
-												.end(binder.toJson(re));
+												.end(binder.toJson(result));
 									}
 								} catch (Exception e) {
 									e.printStackTrace();
