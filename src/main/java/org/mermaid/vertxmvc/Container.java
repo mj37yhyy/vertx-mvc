@@ -95,19 +95,11 @@ public class Container {
 						Map<Method, Object> mMap = new HashMap<Method, Object>();
 						mMap.put(method, instance);
 
-						// 插入映射实例
-						String[] paths = requestMappings[0].value();
-						if (paths.length > 0) {// 如果有设定路径，则映射
-							for (String path : paths) {
-								controllerMapingMap.put(path, mMap);
-							}
-						} else {// 如果不填写路径，则以方法名做为路径
-							controllerMapingMap.put("/" + method.getName(),
-									mMap);
-						}// else
-					}// if
-				}// for
-			}// if
+						controllerMappingMap.put(requestMappings[0], mMap);
+
+					} // if
+				} // for
+			} // if
 			else {
 				Class<?> observableClass = loadClass(metadata);
 				for (Method method : observableClass.getMethods()) {
@@ -143,7 +135,8 @@ public class Container {
 		}
 	}
 
-	private Class<?> loadClass(Metadata metadata) throws ClassNotFoundException {
+	private Class<?> loadClass(Metadata metadata)
+			throws ClassNotFoundException {
 		Class<?> clazz = Thread.currentThread().getContextClassLoader()
 				.loadClass(metadata.getClassMetadata().getClassName());
 		return clazz;
@@ -160,7 +153,7 @@ public class Container {
 	}
 
 	private Logger logger = LogManager.getLogger(getClass());
-	private JsonBinder binder = JsonBinder.buildNormalBinder();
+	private JsonBinder binder = JsonBinder.buildNormalBinder(false);
 
 	private MetadataReader metadataReader = new MetadataReader();
 	static Config config = null;
@@ -169,7 +162,7 @@ public class Container {
 	static final Map<String, Map<Method, Object>> observableMap = new HashMap<String, Map<Method, Object>>();
 
 	static final Map<String, Object> controllerObjectMap = new HashMap<String, Object>();
-	static final Map<String, Map<Method, Object>> controllerMapingMap = new HashMap<String, Map<Method, Object>>();
+	static final Map<RequestMapping, Map<Method, Object>> controllerMappingMap = new HashMap<RequestMapping, Map<Method, Object>>();
 
 	static EventBus eventBus = null;
 }

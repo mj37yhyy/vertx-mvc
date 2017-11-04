@@ -1,10 +1,8 @@
 package org.mermaid.vertxmvc.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
+
+import io.vertx.core.http.HttpMethod;
 
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
@@ -42,5 +40,18 @@ public @interface RequestMapping {
 	 * @see org.springframework.web.bind.annotation.ValueConstants#DEFAULT_NONE
 	 */
 	String[] value() default {};
+
+	/**
+	 * 路由表达式
+	 */
+	String routeWithRegex() default "";
+
+	/**
+	 * 路径表达式
+	 */
+	String pathRegex() default "";
+
+
+	HttpMethod[] method() default {};
 
 }
