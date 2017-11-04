@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class Container {
+class Container {
 
 	/**
 	 * 初始化
@@ -51,7 +51,7 @@ public class Container {
 	/**
 	 * 扫描指定包下的类文件
 	 * 
-	 * @return
+	 * @return Set
 	 */
 	private Set<Resource> scanClasses() {
 		if (config.getScaner() != null
@@ -64,7 +64,7 @@ public class Container {
 	/**
 	 * 初始化类
 	 * 
-	 * @param resource
+	 * @param resource Resource
 	 */
 	private void mapping(Resource resource) {
 		try {
@@ -137,9 +137,8 @@ public class Container {
 
 	private Class<?> loadClass(Metadata metadata)
 			throws ClassNotFoundException {
-		Class<?> clazz = Thread.currentThread().getContextClassLoader()
+		return Thread.currentThread().getContextClassLoader()
 				.loadClass(metadata.getClassMetadata().getClassName());
-		return clazz;
 	}
 
 	/**
@@ -158,10 +157,10 @@ public class Container {
 	private MetadataReader metadataReader = new MetadataReader();
 	static Config config = null;
 
-	static final Map<String, Object> observableObjectMap = new HashMap<String, Object>();
+	private static final Map<String, Object> observableObjectMap = new HashMap<String, Object>();
 	static final Map<String, Map<Method, Object>> observableMap = new HashMap<String, Map<Method, Object>>();
 
-	static final Map<String, Object> controllerObjectMap = new HashMap<String, Object>();
+	private static final Map<String, Object> controllerObjectMap = new HashMap<String, Object>();
 	static final Map<RequestMapping, Map<Method, Object>> controllerMappingMap = new HashMap<RequestMapping, Map<Method, Object>>();
 
 	static EventBus eventBus = null;
