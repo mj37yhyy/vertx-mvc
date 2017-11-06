@@ -32,4 +32,7 @@ public @interface RequestMapping {
 
 	String[] produces() default {};
 
+	// 是否是Multipart
+	boolean isMultipart() default false;
+
 }

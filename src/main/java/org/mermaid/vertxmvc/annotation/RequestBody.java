@@ -16,6 +16,9 @@
 
 package org.mermaid.vertxmvc.annotation;
 
+import org.mermaid.vertxmvc.converters.JsonRequestConverter;
+import org.mermaid.vertxmvc.converters.RequestConverter;
+
 import java.lang.annotation.*;
 
 @Target(ElementType.PARAMETER)
@@ -23,6 +26,7 @@ import java.lang.annotation.*;
 @Documented
 public @interface RequestBody {
 
-	boolean required() default true;
+	// 格式化的方式，默认json
+	Class<? extends RequestConverter> converterType() default JsonRequestConverter.class;
 
 }

@@ -1,8 +1,9 @@
 package org.mermaid.vertxmvc;
 
-import org.mermaid.vertxmvc.utils.JsonBinder;
+import org.mermaid.vertxmvc.annotation.RequestBody;
 
-import java.util.HashMap;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 
 
 public class Test {
@@ -10,9 +11,16 @@ public class Test {
 
 	@org.junit.Test
 	public  void test() throws Exception {
-		JsonBinder binder = JsonBinder.buildNormalBinder();
-
-		System.out.println(binder.fromJson("{\"a\":\"2\",\"b\":\"3\"}", HashMap.class));
+		for (Method method : TestController.class.getMethods()) {
+			for (Annotation[] annotations : method.getParameterAnnotations()) {
+				for (Annotation annotation : annotations) {
+					System.out.println(annotation);
+					System.out.println(annotation.annotationType());
+					System.out.println(annotation.annotationType().isAnnotation());
+					System.out.println(annotation.annotationType().isAssignableFrom(RequestBody.class));
+				}
+			}
+		}
 
 	}
 

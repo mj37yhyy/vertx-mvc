@@ -3,6 +3,7 @@ package org.mermaid.vertxmvc;
 import io.reactivex.Observable;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.reactivex.core.AbstractVerticle;
+import io.vertx.reactivex.core.MultiMap;
 import io.vertx.reactivex.core.eventbus.Message;
 import io.vertx.reactivex.core.eventbus.MessageConsumer;
 import io.vertx.reactivex.core.http.HttpServerRequest;
@@ -13,10 +14,7 @@ import io.vertx.reactivex.ext.web.handler.BodyHandler;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.mermaid.vertxmvc.annotation.Controller;
-import org.mermaid.vertxmvc.annotation.RequestBody;
-import org.mermaid.vertxmvc.annotation.RequestMapping;
-import org.mermaid.vertxmvc.annotation.Service;
+import org.mermaid.vertxmvc.annotation.*;
 import org.mermaid.vertxmvc.classreading.Metadata;
 import org.mermaid.vertxmvc.utils.JsonBinder;
 
@@ -101,11 +99,20 @@ public class DispatcherVerticle extends AbstractVerticle {
 						for (Annotation annotation : parameterAnnotation) {
 							// RequestBody
 							if (annotation.annotationType()
-									.isAnnotationPresent(RequestBody.class)) {
+									.isAssignableFrom(RequestBody.class)) {
 								this.router.route()
 										.handler(BodyHandler.create());
 							}
 						}
+					}
+
+					ResponseBody responseBody = null;
+					if (method.getReturnType()
+							.isAssignableFrom(ResponseBody.class)
+							|| method
+									.getAnnotationsByType(
+											ResponseBody.class).length > 0) {
+						responseBody = method.getAnnotation(ResponseBody.class);
 					}
 
 					// 方法注解
@@ -122,6 +129,8 @@ public class DispatcherVerticle extends AbstractVerticle {
 									.pathRegex(requestMapping.pathRegex());
 							this.handleController(controllerInstance, method,
 									requestMapping, parameterAnnotations,
+
+									responseBody,
 									route);
 						}
 						// 路由正则表达式
@@ -133,7 +142,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 									requestMapping.routeWithRegex());
 							this.handleController(controllerInstance, method,
 									requestMapping, parameterAnnotations,
-									route);
+									responseBody, route);
 						}
 						// 路径正则表达式 + 路由正则表达式
 						else if (!requestMapping.pathRegex().equals("")
@@ -146,7 +155,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 									.pathRegex(requestMapping.pathRegex());
 							this.handleController(controllerInstance, method,
 									requestMapping, parameterAnnotations,
-									route);
+									responseBody, route);
 						}
 						// 普通路径
 						else {
@@ -155,7 +164,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 								this.handleController(controllerInstance,
 										method,
 										requestMapping, parameterAnnotations,
-										route);
+										responseBody, route);
 							} // for
 						} // else
 					} // if
@@ -165,6 +174,51 @@ public class DispatcherVerticle extends AbstractVerticle {
 			logger.error("初始化错误，启动失败");
 			logger.error(e.getMessage(), e);
 			System.exit(0);
+		}
+	}
+
+	/**
+	 * 通用回复的回调接口
+	 */
+	interface ResponseHandler {
+		Object handler()
+				throws InvocationTargetException, IllegalAccessException;
+	}
+
+	/**
+	 * 通用回复
+	 */
+	private void doResponse(
+			HttpServerResponse response,
+			ResponseBody responseBody,
+			ResponseHandler responseHandler) {
+		Object result;
+		try {
+			result = responseHandler.handler();
+			if (result != null) {
+				if (responseBody != null) {
+					response.end(
+							responseBody.converterType()
+									.newInstance()
+									.convert(result));
+				} else
+					response.end(result.toString());
+			}
+		} catch (InvocationTargetException e) {// 如果发生错误
+			logger.error(e.getCause().getMessage(),
+					e.getCause());
+			result = "{\"error\":\""
+					+ e.getCause().getMessage()
+					+ "\"}";
+			response.setStatusCode(500)
+					.end(result.toString());
+		} catch (Throwable e) {
+			logger.error(e.getMessage(), e);
+			result = "{\"error\":\""
+					+ e.getMessage()
+					+ "\"}";
+			response.setStatusCode(500)
+					.end(result.toString());
 		}
 	}
 
@@ -179,6 +233,8 @@ public class DispatcherVerticle extends AbstractVerticle {
 	 *            RequestMapping
 	 * @param parameterAnnotations
 	 *            parameter Annotations type Annotation[][]
+	 * @param responseBody
+	 *            ResponseBody
 	 * @param route
 	 *            Route
 	 */
@@ -187,6 +243,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 			Method method,
 			RequestMapping requestMapping,
 			Annotation[][] parameterAnnotations,
+			ResponseBody responseBody,
 			Route route) {
 
 		// http 方法
@@ -215,71 +272,89 @@ public class DispatcherVerticle extends AbstractVerticle {
 				routingContext -> {
 					HttpServerRequest request = routingContext.request();
 					HttpServerResponse response = routingContext.response();
-					// @TODO Session Cookie File getAsJson
 
 					response.putHeader("content-type",
 							"text/plain;charset=utf-8");
 
-					// request.params() 转换成 Map
-					Map<String, String> params = request
-							.params().getDelegate().entries().stream()
-							.collect(Collectors.toMap(Map.Entry::getKey,
-									Map.Entry::getValue));
+					// 如果是Multipart
+					if (requestMapping.isMultipart()) {
+						request.setExpectMultipart(true);
+						request.uploadHandler(upload -> upload.endHandler(v -> {
+                            MultiMap formAttributes = request
+                                    .formAttributes();
+                            this.doResponse(response, responseBody,
+                                    () -> method.invoke(
+                                            controllerInstance,
+                                            formAttributes, upload));
+                        }));
+					}
+					// 如果不是Multipart
+					else {
+						// request.params() 转换成 Map
+						Map<String, String> params = request
+								.params().getDelegate().entries().stream()
+								.collect(Collectors.toMap(Map.Entry::getKey,
+										Map.Entry::getValue));
 
-					try {
-						List<Object> args = new ArrayList<>();
-						for (Class<?> parameterTypeClass : method
-								.getParameterTypes()) {
-							if (parameterTypeClass
-									.isInstance(request)) {// 如果是request，直接赋值
-								args.add(request);
-							} else if (parameterTypeClass
-									.isInstance(response)) {// 如果是response，直接赋值
-								args.add(response);
-							} else if (parameterTypeClass
-									.isInstance(routingContext)) {// 如果是routingContext，直接赋值
-								args.add(routingContext);
-							} else if (parameterTypeClass
-									.isInstance(params)) {// 如果是map，直接赋值
-								args.add(params);
-							} else {// 如果是javabean,进行转换
-								Object parameterTypeInstance = parameterTypeClass
-										.newInstance();
-								try {
-									BeanUtils.populate(
-											parameterTypeInstance,
-											params);
-								} catch (IllegalAccessException e) {
-									logger.error("无法赋值");
-								}
-								args.add(parameterTypeInstance);
-							}
-						}
-						Object result;
 						try {
-							// 调用Controller方法
-							result = method.invoke(controllerInstance,
-									args.toArray(new Object[0]));
-							if (result != null)
-								response.end(binder.toJson(result));
-						} catch (InvocationTargetException e) {// 如果发生错误
-							logger.error(e.getCause().getMessage(),
-									e.getCause());
-							result = "{\"error\":\""
-									+ e.getCause().getMessage()
-									+ "\"}";
-							response.setStatusCode(500)
-									.end(binder.toJson(result));
-						} catch (Throwable e) {
-							logger.error(e.getMessage(), e);
-							result = "{\"error\":\""
-									+ e.getMessage()
-									+ "\"}";
-							response.setStatusCode(500)
-									.end(binder.toJson(result));
+							List<Object> args = new ArrayList<>();
+							for (int i = 0; i < method
+									.getParameterTypes().length; i++) {
+								Class<?> parameterTypeClass = method
+										.getParameterTypes()[i];
+
+								boolean isAdded = false;// 本参数是否已经加入
+								Annotation[] annotations = parameterAnnotations[i];// 得到入参上注解
+								for (Annotation annotation : annotations) {
+									// 如果是RequestBody
+									if (annotation.annotationType()
+											.isAssignableFrom(
+													RequestBody.class)) {
+										// 调用转换器进行装换
+										args.add(((RequestBody) annotation)
+												.converterType().newInstance()
+												.convert(
+														routingContext
+																.getBody(),
+														parameterTypeClass));
+										isAdded = true;
+										break;
+									}
+								}
+								if (!isAdded) {
+									if (parameterTypeClass
+											.isInstance(request)) {// 如果是request，直接赋值
+										args.add(request);
+									} else if (parameterTypeClass
+											.isInstance(response)) {// 如果是response，直接赋值
+										args.add(response);
+									} else if (parameterTypeClass
+											.isInstance(routingContext)) {// 如果是routingContext，直接赋值
+										args.add(routingContext);
+									} else if (parameterTypeClass
+											.isInstance(params)) {// 如果是map，直接赋值
+										args.add(params);
+									} else {// 如果是javabean,进行转换
+										Object parameterTypeInstance = parameterTypeClass
+												.newInstance();
+										try {
+											BeanUtils.populate(
+													parameterTypeInstance,
+													params);
+										} catch (IllegalAccessException e) {
+											logger.error("无法赋值");
+										}
+										args.add(parameterTypeInstance);
+									}
+								}
+							}
+							this.doResponse(response, responseBody,
+									() -> method.invoke(
+											controllerInstance,
+											args.toArray(new Object[0])));
+						} catch (Exception e) {
+							e.printStackTrace();
 						}
-					} catch (Exception e) {
-						e.printStackTrace();
 					}
 				});
 	}

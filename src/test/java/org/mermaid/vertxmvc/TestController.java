@@ -1,16 +1,23 @@
 package org.mermaid.vertxmvc;
 
 import io.vertx.core.http.HttpMethod;
+import io.vertx.reactivex.core.MultiMap;
+import io.vertx.reactivex.core.http.HttpServerFileUpload;
 import org.mermaid.vertxmvc.annotation.Controller;
+import org.mermaid.vertxmvc.annotation.RequestBody;
 import org.mermaid.vertxmvc.annotation.RequestMapping;
+import org.mermaid.vertxmvc.annotation.ResponseBody;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Controller
 public class TestController {
 
 	@RequestMapping("/test/:la")
-	public Map test(Map map) {
+	public @ResponseBody
+	Map test(Map map) {
 		System.out
 				.println("--------------TestController--------------/test/:la");
 		EventBusHelper.send(TestService.class, "test", map, re -> {
@@ -20,6 +27,7 @@ public class TestController {
 	}
 
 	@RequestMapping("/test2")
+	// @ResponseBody
 	public Map test2(Map map) {
 		System.out.println("--------------TestController--------------/test2");
 		EventBusHelper.send(TestService.class, "test", map, re -> {
@@ -28,8 +36,34 @@ public class TestController {
 		return map;
 	}
 
+	@RequestMapping("/jsonTest")
+	// @ResponseBody
+	public String jsonTest(
+			@RequestBody
+			HashMap map) {
+		System.out
+				.println("--------------TestController--------------/jsonTest="
+						+ map);
+		return "gthjkl;";
+	}
+
+	@RequestMapping(value = "/fileTest", isMultipart = true)
+	// @ResponseBody
+	public String fileTest(
+			MultiMap formAttributes,
+			HttpServerFileUpload upload) {
+		Set<String> a = formAttributes.names();
+		System.out
+				.println("--------------TestController--------------/fileTest");
+		System.out.println("a=" + a);
+		System.out.println("upload=" + upload.filename());
+		upload.streamToFileSystem("d:/1.txt");
+		return "gthjkl;";
+	}
+
 	@RequestMapping(pathRegex = ".*foo")
-	public Map test3(Map map) {
+	public @ResponseBody
+	Map test3(Map map) {
 		System.out
 				.println("--------------TestController--------------test3");
 		EventBusHelper.send(TestService.class, "test", map, re -> {
@@ -39,7 +73,8 @@ public class TestController {
 	}
 
 	@RequestMapping(routeWithRegex = ".*foo")
-	public Map test4(Map map) {
+	public @ResponseBody
+	Map test4(Map map) {
 		System.out
 				.println("--------------TestController--------------test4");
 		EventBusHelper.send(TestService.class, "test", map, re -> {
@@ -54,6 +89,7 @@ public class TestController {
 			method = {
 					HttpMethod.GET, HttpMethod.POST
 			})
+	@ResponseBody
 	public Map foo_bar(Map map) {
 		System.out
 				.println("--------------TestController--------------foo_bar");
