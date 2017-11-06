@@ -55,13 +55,11 @@ public class TestController {
 					HttpMethod.GET, HttpMethod.POST
 			})
 	public Map foo_bar(Map map) {
-		//Assert.requireNonEmpty(map.get("namespace"),"请填写名字空间名称");
-		throw new RuntimeException("hkjl;");
-//		System.out
-//				.println("--------------TestController--------------foo_bar");
-//		EventBusHelper.send(TestService.class, "test", map, re -> {
-//			System.out.println(re);
-//		});
-//		return map;
+		System.out
+				.println("--------------TestController--------------foo_bar");
+		EventBusHelper.send(TestService.class, "test", map, re -> {
+			System.out.println(re);
+		});
+		return map;
 	}
 }

@@ -16,14 +16,18 @@ public class EventBusHelper {
 	 * @param returnHandler
 	 *            消息返回回调
 	 */
-	public static <T> void send(String className, String methodName,
-			Object msg, ReturnHandler<T> returnHandler) {
+	public static <T> void send(
+			String className,
+			String methodName,
+			Object msg,
+			ReturnHandler<T> returnHandler) {
 		JsonBinder binder = JsonBinder.buildNormalBinder(false);
-		Container.eventBus.<T> send(className + ":" + methodName, binder.toJson(msg), ar -> {
-			if (ar.succeeded()) {
-				returnHandler.handler(ar.result().body());
-			}
-		});
+		Container.eventBus.<T> send(className + ":" + methodName,
+				binder.toJson(msg), replyHandler -> {
+					if (replyHandler.succeeded()) {
+						returnHandler.handler(replyHandler.result().body());
+					}
+				});
 	}
 
 	/**
@@ -38,7 +42,10 @@ public class EventBusHelper {
 	 * @param returnHandler
 	 *            消息返回回调
 	 */
-	public static <T> void send(Class<?> clazz, String methodName, Object msg,
+	public static <T> void send(
+			Class<?> clazz,
+			String methodName,
+			Object msg,
 			ReturnHandler<T> returnHandler) {
 		send(clazz.getName(), methodName, msg, returnHandler);
 	}
@@ -55,7 +62,10 @@ public class EventBusHelper {
 	 * @param returnHandler
 	 *            消息返回回调
 	 */
-	public static <T> void send(Object instance, String methodName, Object msg,
+	public static <T> void send(
+			Object instance,
+			String methodName,
+			Object msg,
 			ReturnHandler<T> returnHandler) {
 		send(instance.getClass().getName(), methodName, msg, returnHandler);
 	}
@@ -63,12 +73,10 @@ public class EventBusHelper {
 	/**
 	 * 返回接口
 	 * 
-	 * @author ji.miao
-	 *
 	 * @param <T>
 	 */
 	public interface ReturnHandler<T> {
 		public void handler(T t);
 	}
-	
+
 }
