@@ -3,7 +3,6 @@ package org.mermaid.vertxmvc;
 import io.reactivex.Observable;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.reactivex.core.AbstractVerticle;
-import io.vertx.reactivex.core.MultiMap;
 import io.vertx.reactivex.core.eventbus.Message;
 import io.vertx.reactivex.core.eventbus.MessageConsumer;
 import io.vertx.reactivex.core.http.HttpServerRequest;
@@ -276,86 +275,95 @@ public class DispatcherVerticle extends AbstractVerticle {
 					response.putHeader("content-type",
 							"text/plain;charset=utf-8");
 
+//					routingContext.cookies();
+
+					// String contentType =
+					// request.getDelegate().getHeader("Content-Type");
+					// System.out.println("contentType=" + contentType);
 					// 如果是Multipart
-					if (requestMapping.isMultipart()) {
-						request.setExpectMultipart(true);
-						request.uploadHandler(upload -> upload.endHandler(v -> {
-                            MultiMap formAttributes = request
-                                    .formAttributes();
-                            this.doResponse(response, responseBody,
-                                    () -> method.invoke(
-                                            controllerInstance,
-                                            formAttributes, upload));
-                        }));
-					}
-					// 如果不是Multipart
-					else {
-						// request.params() 转换成 Map
-						Map<String, String> params = request
-								.params().getDelegate().entries().stream()
-								.collect(Collectors.toMap(Map.Entry::getKey,
-										Map.Entry::getValue));
+					// if (contentType
+					// .startsWith("multipart/form-data; boundary=")) {
+					// if(requestMapping.isMultipart()){
+					// request.setExpectMultipart(true);
+					// request.uploadHandler(upload -> upload.endHandler(v -> {
+					// MultiMap formAttributes = request
+					// .params();
+					// System.out.println(
+					// "formAttributes=" + formAttributes);
+					// this.doResponse(response, responseBody,
+					// () -> method.invoke(
+					// controllerInstance,
+					// formAttributes, upload));
+					// }));
+					// }
+					// // 如果不是Multipart
+					// else {
+					// request.params() 转换成 Map
+					Map<String, String> params = request
+							.params().getDelegate().entries().stream()
+							.collect(Collectors.toMap(Map.Entry::getKey,
+									Map.Entry::getValue));
 
-						try {
-							List<Object> args = new ArrayList<>();
-							for (int i = 0; i < method
-									.getParameterTypes().length; i++) {
-								Class<?> parameterTypeClass = method
-										.getParameterTypes()[i];
+					try {
+						List<Object> args = new ArrayList<>();
+						for (int i = 0; i < method
+								.getParameterTypes().length; i++) {
+							Class<?> parameterTypeClass = method
+									.getParameterTypes()[i];
 
-								boolean isAdded = false;// 本参数是否已经加入
-								Annotation[] annotations = parameterAnnotations[i];// 得到入参上注解
-								for (Annotation annotation : annotations) {
-									// 如果是RequestBody
-									if (annotation.annotationType()
-											.isAssignableFrom(
-													RequestBody.class)) {
-										// 调用转换器进行装换
-										args.add(((RequestBody) annotation)
-												.converterType().newInstance()
-												.convert(
-														routingContext
-																.getBody(),
-														parameterTypeClass));
-										isAdded = true;
-										break;
-									}
-								}
-								if (!isAdded) {
-									if (parameterTypeClass
-											.isInstance(request)) {// 如果是request，直接赋值
-										args.add(request);
-									} else if (parameterTypeClass
-											.isInstance(response)) {// 如果是response，直接赋值
-										args.add(response);
-									} else if (parameterTypeClass
-											.isInstance(routingContext)) {// 如果是routingContext，直接赋值
-										args.add(routingContext);
-									} else if (parameterTypeClass
-											.isInstance(params)) {// 如果是map，直接赋值
-										args.add(params);
-									} else {// 如果是javabean,进行转换
-										Object parameterTypeInstance = parameterTypeClass
-												.newInstance();
-										try {
-											BeanUtils.populate(
-													parameterTypeInstance,
-													params);
-										} catch (IllegalAccessException e) {
-											logger.error("无法赋值");
-										}
-										args.add(parameterTypeInstance);
-									}
+							boolean isAdded = false;// 本参数是否已经加入
+							Annotation[] annotations = parameterAnnotations[i];// 得到入参上注解
+							for (Annotation annotation : annotations) {
+								// 如果是RequestBody
+								if (annotation.annotationType()
+										.isAssignableFrom(
+												RequestBody.class)) {
+									// 调用转换器进行装换
+									args.add(((RequestBody) annotation)
+											.converterType().newInstance()
+											.convert(
+													routingContext
+															.getBody(),
+													parameterTypeClass));
+									isAdded = true;
+									break;
 								}
 							}
-							this.doResponse(response, responseBody,
-									() -> method.invoke(
-											controllerInstance,
-											args.toArray(new Object[0])));
-						} catch (Exception e) {
-							e.printStackTrace();
+							if (!isAdded) {
+								if (parameterTypeClass
+										.isInstance(request)) {// 如果是request，直接赋值
+									args.add(request);
+								} else if (parameterTypeClass
+										.isInstance(response)) {// 如果是response，直接赋值
+									args.add(response);
+								} else if (parameterTypeClass
+										.isInstance(routingContext)) {// 如果是routingContext，直接赋值
+									args.add(routingContext);
+								} else if (parameterTypeClass
+										.isInstance(params)) {// 如果是map，直接赋值
+									args.add(params);
+								} else {// 如果是javabean,进行转换
+									Object parameterTypeInstance = parameterTypeClass
+											.newInstance();
+									try {
+										BeanUtils.populate(
+												parameterTypeInstance,
+												params);
+									} catch (IllegalAccessException e) {
+										logger.error("无法赋值");
+									}
+									args.add(parameterTypeInstance);
+								}
+							}
 						}
+						this.doResponse(response, responseBody,
+								() -> method.invoke(
+										controllerInstance,
+										args.toArray(new Object[0])));
+					} catch (Exception e) {
+						e.printStackTrace();
 					}
+					// }
 				});
 	}
 
