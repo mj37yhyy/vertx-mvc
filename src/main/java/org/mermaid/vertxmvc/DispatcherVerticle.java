@@ -436,7 +436,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 		}
 	}
 
-	private JsonBinder binder = JsonBinder.buildNormalBinder(false);
+	private JsonBinder binder = JsonBinder.buildNormalBinder();
 	private Logger logger = LogManager.getLogger(getClass());
 	private Router router = null;
 }
