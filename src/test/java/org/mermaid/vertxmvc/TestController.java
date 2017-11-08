@@ -47,7 +47,7 @@ public class TestController {
 		return "gthjkl;";
 	}
 
-	@RequestMapping(value = "/fileTest", isMultipart = true)
+	@RequestMapping(value = "/fileTest")
 	// @ResponseBody
 	public String fileTest(
 			MultiMap formAttributes,

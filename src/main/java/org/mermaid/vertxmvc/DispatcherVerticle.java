@@ -28,6 +28,12 @@ import java.util.stream.Collectors;
 public class DispatcherVerticle extends AbstractVerticle {
 
 	public void start() {
+		System.out.println(" _     _   _____   _____    _____  __    __           ___  ___   _     _   _____  \n" +
+				"| |   / / | ____| |  _  \\  |_   _| \\ \\  / /          /   |/   | | |   / / /  ___| \n" +
+				"| |  / /  | |__   | |_| |    | |    \\ \\/ /          / /|   /| | | |  / /  | |     \n" +
+				"| | / /   |  __|  |  _  /    | |     }  {          / / |__/ | | | | / /   | |     \n" +
+				"| |/ /    | |___  | | \\ \\    | |    / /\\ \\        / /       | | | |/ /    | |___  \n" +
+				"|___/     |_____| |_|  \\_\\   |_|   /_/  \\_\\      /_/        |_| |___/     \\_____| ");
 		logger.info("vertx-mvc starting...");
 
 		initEventBus();
