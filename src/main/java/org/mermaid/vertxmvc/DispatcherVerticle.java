@@ -1,6 +1,7 @@
 package org.mermaid.vertxmvc;
 
 import io.reactivex.Observable;
+import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.reactivex.core.AbstractVerticle;
 import io.vertx.reactivex.core.eventbus.Message;
@@ -9,6 +10,7 @@ import io.vertx.reactivex.core.http.HttpServerRequest;
 import io.vertx.reactivex.core.http.HttpServerResponse;
 import io.vertx.reactivex.ext.web.Route;
 import io.vertx.reactivex.ext.web.Router;
+import io.vertx.reactivex.ext.web.RoutingContext;
 import io.vertx.reactivex.ext.web.handler.BodyHandler;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.logging.log4j.LogManager;
@@ -28,12 +30,18 @@ import java.util.stream.Collectors;
 public class DispatcherVerticle extends AbstractVerticle {
 
 	public void start() {
-		System.out.println(" _     _   _____   _____    _____  __    __           ___  ___   _     _   _____  \n" +
-				"| |   / / | ____| |  _  \\  |_   _| \\ \\  / /          /   |/   | | |   / / /  ___| \n" +
-				"| |  / /  | |__   | |_| |    | |    \\ \\/ /          / /|   /| | | |  / /  | |     \n" +
-				"| | / /   |  __|  |  _  /    | |     }  {          / / |__/ | | | | / /   | |     \n" +
-				"| |/ /    | |___  | | \\ \\    | |    / /\\ \\        / /       | | | |/ /    | |___  \n" +
-				"|___/     |_____| |_|  \\_\\   |_|   /_/  \\_\\      /_/        |_| |___/     \\_____| ");
+		System.out.println(
+				" _     _   _____   _____    _____  __    __           ___  ___   _     _   _____  \n"
+						+
+						"| |   / / | ____| |  _  \\  |_   _| \\ \\  / /          /   |/   | | |   / / /  ___| \n"
+						+
+						"| |  / /  | |__   | |_| |    | |    \\ \\/ /          / /|   /| | | |  / /  | |     \n"
+						+
+						"| | / /   |  __|  |  _  /    | |     }  {          / / |__/ | | | | / /   | |     \n"
+						+
+						"| |/ /    | |___  | | \\ \\    | |    / /\\ \\        / /       | | | |/ /    | |___  \n"
+						+
+						"|___/     |_____| |_|  \\_\\   |_|   /_/  \\_\\      /_/        |_| |___/     \\_____| ");
 		logger.info("vertx-mvc starting...");
 
 		initEventBus();
@@ -49,6 +57,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 	}
 
 	private void initEventBus() {
+		VertxMvc.setEventBus(this.vertx.eventBus());
 		Container.eventBus = this.vertx.eventBus();
 	}
 
@@ -117,7 +126,8 @@ public class DispatcherVerticle extends AbstractVerticle {
 							|| method
 									.getAnnotationsByType(
 											ResponseBody.class).length > 0) {
-						responseBody = method.getAnnotation(ResponseBody.class);
+						responseBody = method
+								.getAnnotation(ResponseBody.class);
 					}
 
 					// 方法注解
@@ -128,11 +138,13 @@ public class DispatcherVerticle extends AbstractVerticle {
 
 						// 路径正则表达式
 						if (!requestMapping.pathRegex().equals("")
-								&& requestMapping.routeWithRegex().equals("")) {
+								&& requestMapping.routeWithRegex()
+										.equals("")) {
 
 							Route route = this.router.route()
 									.pathRegex(requestMapping.pathRegex());
-							this.handleController(controllerInstance, method,
+							this.handleController(controllerInstance,
+									method,
 									requestMapping, parameterAnnotations,
 
 									responseBody,
@@ -145,7 +157,8 @@ public class DispatcherVerticle extends AbstractVerticle {
 
 							Route route = this.router.routeWithRegex(
 									requestMapping.routeWithRegex());
-							this.handleController(controllerInstance, method,
+							this.handleController(controllerInstance,
+									method,
 									requestMapping, parameterAnnotations,
 									responseBody, route);
 						}
@@ -158,7 +171,8 @@ public class DispatcherVerticle extends AbstractVerticle {
 									.routeWithRegex(
 											requestMapping.routeWithRegex())
 									.pathRegex(requestMapping.pathRegex());
-							this.handleController(controllerInstance, method,
+							this.handleController(controllerInstance,
+									method,
 									requestMapping, parameterAnnotations,
 									responseBody, route);
 						}
@@ -168,7 +182,8 @@ public class DispatcherVerticle extends AbstractVerticle {
 								Route route = this.router.route(path);
 								this.handleController(controllerInstance,
 										method,
-										requestMapping, parameterAnnotations,
+										requestMapping,
+										parameterAnnotations,
 										responseBody, route);
 							} // for
 						} // else
@@ -249,7 +264,8 @@ public class DispatcherVerticle extends AbstractVerticle {
 			RequestMapping requestMapping,
 			Annotation[][] parameterAnnotations,
 			ResponseBody responseBody,
-			Route route) {
+			Route route)
+			throws InvocationTargetException, IllegalAccessException {
 
 		// http 方法
 		if (requestMapping.method().length > 0) {
@@ -272,105 +288,115 @@ public class DispatcherVerticle extends AbstractVerticle {
 			}
 		}
 
-		// handler
-		route.handler(
-				routingContext -> {
-					HttpServerRequest request = routingContext.request();
-					HttpServerResponse response = routingContext.response();
+		// 返回值
+		// 如果返回值是Handler且无参数
+		if (method.getReturnType().isAssignableFrom(Handler.class)
+				&& method.getParameterCount() == 0) {
+			this.router.route()
+					.handler((Handler<RoutingContext>) method
+							.invoke(controllerInstance, null));
+		} else {
+			// handler
+			route.handler(
+					routingContext -> {
+						HttpServerRequest request = routingContext.request();
+						HttpServerResponse response = routingContext.response();
 
-					response.putHeader("content-type",
-							"text/plain;charset=utf-8");
+						response.putHeader("content-type",
+								"text/plain;charset=utf-8");
 
-//					routingContext.cookies();
+						// routingContext.cookies();
 
-					// String contentType =
-					// request.getDelegate().getHeader("Content-Type");
-					// System.out.println("contentType=" + contentType);
-					// 如果是Multipart
-					// if (contentType
-					// .startsWith("multipart/form-data; boundary=")) {
-					// if(requestMapping.isMultipart()){
-					// request.setExpectMultipart(true);
-					// request.uploadHandler(upload -> upload.endHandler(v -> {
-					// MultiMap formAttributes = request
-					// .params();
-					// System.out.println(
-					// "formAttributes=" + formAttributes);
-					// this.doResponse(response, responseBody,
-					// () -> method.invoke(
-					// controllerInstance,
-					// formAttributes, upload));
-					// }));
-					// }
-					// // 如果不是Multipart
-					// else {
-					// request.params() 转换成 Map
-					Map<String, String> params = request
-							.params().getDelegate().entries().stream()
-							.collect(Collectors.toMap(Map.Entry::getKey,
-									Map.Entry::getValue));
+						// String contentType =
+						// request.getDelegate().getHeader("Content-Type");
+						// System.out.println("contentType=" + contentType);
+						// 如果是Multipart
+						// if (contentType
+						// .startsWith("multipart/form-data; boundary=")) {
+						// if(requestMapping.isMultipart()){
+						// request.setExpectMultipart(true);
+						// request.uploadHandler(upload -> upload.endHandler(v
+						// -> {
+						// MultiMap formAttributes = request
+						// .params();
+						// System.out.println(
+						// "formAttributes=" + formAttributes);
+						// this.doResponse(response, responseBody,
+						// () -> method.invoke(
+						// controllerInstance,
+						// formAttributes, upload));
+						// }));
+						// }
+						// // 如果不是Multipart
+						// else {
+						// request.params() 转换成 Map
+						Map<String, String> params = request
+								.params().getDelegate().entries().stream()
+								.collect(Collectors.toMap(Map.Entry::getKey,
+										Map.Entry::getValue));
 
-					try {
-						List<Object> args = new ArrayList<>();
-						for (int i = 0; i < method
-								.getParameterTypes().length; i++) {
-							Class<?> parameterTypeClass = method
-									.getParameterTypes()[i];
+						try {
+							List<Object> args = new ArrayList<>();
+							for (int i = 0; i < method
+									.getParameterTypes().length; i++) {
+								Class<?> parameterTypeClass = method
+										.getParameterTypes()[i];
 
-							boolean isAdded = false;// 本参数是否已经加入
-							Annotation[] annotations = parameterAnnotations[i];// 得到入参上注解
-							for (Annotation annotation : annotations) {
-								// 如果是RequestBody
-								if (annotation.annotationType()
-										.isAssignableFrom(
-												RequestBody.class)) {
-									// 调用转换器进行装换
-									args.add(((RequestBody) annotation)
-											.converterType().newInstance()
-											.convert(
-													routingContext
-															.getBody(),
-													parameterTypeClass));
-									isAdded = true;
-									break;
-								}
-							}
-							if (!isAdded) {
-								if (parameterTypeClass
-										.isInstance(request)) {// 如果是request，直接赋值
-									args.add(request);
-								} else if (parameterTypeClass
-										.isInstance(response)) {// 如果是response，直接赋值
-									args.add(response);
-								} else if (parameterTypeClass
-										.isInstance(routingContext)) {// 如果是routingContext，直接赋值
-									args.add(routingContext);
-								} else if (parameterTypeClass
-										.isInstance(params)) {// 如果是map，直接赋值
-									args.add(params);
-								} else {// 如果是javabean,进行转换
-									Object parameterTypeInstance = parameterTypeClass
-											.newInstance();
-									try {
-										BeanUtils.populate(
-												parameterTypeInstance,
-												params);
-									} catch (IllegalAccessException e) {
-										logger.error("无法赋值");
+								boolean isAdded = false;// 本参数是否已经加入
+								Annotation[] annotations = parameterAnnotations[i];// 得到入参上注解
+								for (Annotation annotation : annotations) {
+									// 如果是RequestBody
+									if (annotation.annotationType()
+											.isAssignableFrom(
+													RequestBody.class)) {
+										// 调用转换器进行装换
+										args.add(((RequestBody) annotation)
+												.converterType().newInstance()
+												.convert(
+														routingContext
+																.getBody(),
+														parameterTypeClass));
+										isAdded = true;
+										break;
 									}
-									args.add(parameterTypeInstance);
+								}
+								if (!isAdded) {
+									if (parameterTypeClass
+											.isInstance(request)) {// 如果是request，直接赋值
+										args.add(request);
+									} else if (parameterTypeClass
+											.isInstance(response)) {// 如果是response，直接赋值
+										args.add(response);
+									} else if (parameterTypeClass
+											.isInstance(routingContext)) {// 如果是routingContext，直接赋值
+										args.add(routingContext);
+									} else if (parameterTypeClass
+											.isInstance(params)) {// 如果是map，直接赋值
+										args.add(params);
+									} else {// 如果是javabean,进行转换
+										Object parameterTypeInstance = parameterTypeClass
+												.newInstance();
+										try {
+											BeanUtils.populate(
+													parameterTypeInstance,
+													params);
+										} catch (IllegalAccessException e) {
+											logger.error("无法赋值");
+										}
+										args.add(parameterTypeInstance);
+									}
 								}
 							}
+							this.doResponse(response, responseBody,
+									() -> method.invoke(
+											controllerInstance,
+											args.toArray(new Object[0])));
+						} catch (Exception e) {
+							e.printStackTrace();
 						}
-						this.doResponse(response, responseBody,
-								() -> method.invoke(
-										controllerInstance,
-										args.toArray(new Object[0])));
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-					// }
-				});
+						// }
+					});
+		}
 	}
 
 	/**

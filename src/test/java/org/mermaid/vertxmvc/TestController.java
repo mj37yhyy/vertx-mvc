@@ -1,8 +1,12 @@
 package org.mermaid.vertxmvc;
 
+import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.ext.web.handler.sockjs.SockJSHandlerOptions;
 import io.vertx.reactivex.core.MultiMap;
 import io.vertx.reactivex.core.http.HttpServerFileUpload;
+import io.vertx.reactivex.ext.web.RoutingContext;
+import io.vertx.reactivex.ext.web.handler.sockjs.SockJSHandler;
 import org.mermaid.vertxmvc.annotation.Controller;
 import org.mermaid.vertxmvc.annotation.RequestBody;
 import org.mermaid.vertxmvc.annotation.RequestMapping;
@@ -97,5 +101,20 @@ public class TestController {
 			System.out.println(re);
 		});
 		return map;
+	}
+
+	@RequestMapping(value = "/ndy")
+	public Handler<RoutingContext> myHandler() {
+
+		SockJSHandlerOptions options = new SockJSHandlerOptions().setHeartbeatInterval(2000);
+
+		Handler sockJSHandler = SockJSHandler.create(VertxMvc.getVertx(), options);
+		return sockJSHandler;
+//		return routingContext -> {
+////
+////			HttpServerResponse response = routingContext.response();
+////			response.putHeader("content-type", "text/plain;charset=utf-8");
+////			response.end("你大爷\n");
+////		};
 	}
 }
