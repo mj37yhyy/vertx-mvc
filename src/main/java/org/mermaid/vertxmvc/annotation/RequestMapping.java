@@ -32,6 +32,8 @@ public @interface RequestMapping {
 
 	String[] produces() default {};
 
+	String params() default "";
+
 	// 是否是Multipart
 //	boolean isMultipart() default false;
 

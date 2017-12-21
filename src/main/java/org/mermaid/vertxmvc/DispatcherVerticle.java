@@ -12,12 +12,14 @@ import io.vertx.reactivex.ext.web.Route;
 import io.vertx.reactivex.ext.web.Router;
 import io.vertx.reactivex.ext.web.RoutingContext;
 import io.vertx.reactivex.ext.web.handler.BodyHandler;
+import ognl.OgnlException;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mermaid.vertxmvc.annotation.*;
 import org.mermaid.vertxmvc.classreading.Metadata;
 import org.mermaid.vertxmvc.utils.JsonBinder;
+import org.mermaid.vertxmvc.utils.ognl.ExpressionEvaluator;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -57,6 +59,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 	}
 
 	private void initEventBus() {
+		VertxMvc.setVertx(this.vertx);
 		VertxMvc.setEventBus(this.vertx.eventBus());
 		Container.eventBus = this.vertx.eventBus();
 	}
@@ -300,6 +303,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 			route.handler(
 					routingContext -> {
 						HttpServerRequest request = routingContext.request();
+
 						HttpServerResponse response = routingContext.response();
 
 						response.putHeader("content-type",
@@ -334,6 +338,18 @@ public class DispatcherVerticle extends AbstractVerticle {
 								.params().getDelegate().entries().stream()
 								.collect(Collectors.toMap(Map.Entry::getKey,
 										Map.Entry::getValue));
+
+						// 如果有参数且参数条件不匹配，直接返回404
+						try {
+							if (!"".equals(requestMapping.params())
+									&& !expressionEvaluator.evaluateBoolean(
+											requestMapping.params(), params)) {
+								response.setStatusCode(404).end();
+								return;
+							}
+						} catch (OgnlException e) {
+							e.printStackTrace();
+						}
 
 						try {
 							List<Object> args = new ArrayList<>();
@@ -471,4 +487,5 @@ public class DispatcherVerticle extends AbstractVerticle {
 	private JsonBinder binder = JsonBinder.buildNormalBinder();
 	private Logger logger = LogManager.getLogger(getClass());
 	private Router router = null;
+	private ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator();
 }
