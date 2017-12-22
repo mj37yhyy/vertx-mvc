@@ -4,6 +4,8 @@ public class Server {
 
 	private int port;
 
+	private String contextPath;
+
 	public int getPort() {
 		return port;
 	}
@@ -12,8 +14,19 @@ public class Server {
 		this.port = port;
 	}
 
+	public String getContextPath() {
+		return contextPath;
+	}
+
+	public void setContextPath(String contextPath) {
+		this.contextPath = contextPath;
+	}
+
 	@Override
 	public String toString() {
-		return "Server [port=" + port + "]";
+		return "Server{" +
+				"port=" + port +
+				", contextPath='" + contextPath + '\'' +
+				'}';
 	}
 }

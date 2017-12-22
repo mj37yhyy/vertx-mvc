@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Controller
+//@RequestMapping("/test")
 public class TestController {
 
 	@RequestMapping("/test/:la")
@@ -136,6 +137,24 @@ public class TestController {
 	@RequestMapping(value = "/",params = "a==3 && b==4")
 	public @ResponseBody
 	Map ndy4(Map map) {
+		return map;
+	}
+
+	@RequestMapping(value = "/mtest",method = {
+			HttpMethod.GET
+	})
+	public @ResponseBody
+	Map m1(Map map) {
+		map.put("mtest","GET");
+		return map;
+	}
+
+	@RequestMapping(value = "/mtest",method = {
+			HttpMethod.POST
+	})
+	public @ResponseBody
+	Map m2(Map map) {
+		map.put("mtest","POST");
 		return map;
 	}
 }

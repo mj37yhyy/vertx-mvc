@@ -40,4 +40,12 @@ public class Test {
 
 	}
 
+	@org.junit.Test
+	public void test3() throws Exception {
+		System.out.println("//test/////s"
+				.replaceAll("[/]+","/"));
+
+
+	}
+
 }

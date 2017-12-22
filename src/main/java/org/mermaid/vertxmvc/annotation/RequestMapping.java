@@ -5,7 +5,7 @@ import io.vertx.core.http.HttpMethod;
 import java.lang.annotation.*;
 
 @Target({
-		ElementType.METHOD
+		ElementType.METHOD, ElementType.TYPE
 })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
@@ -35,6 +35,6 @@ public @interface RequestMapping {
 	String params() default "";
 
 	// 是否是Multipart
-//	boolean isMultipart() default false;
+	// boolean isMultipart() default false;
 
 }

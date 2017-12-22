@@ -104,11 +104,27 @@ public class DispatcherVerticle extends AbstractVerticle {
 					Controller.class.getName())) {
 				// 映射路径和方法
 				Class<?> controllerClass = loadClass(metadata);
+				RequestMapping requestMapping = controllerClass
+						.getAnnotation(RequestMapping.class);
+
+				// 配置根路径
+				String contextPath = Container.config.getServer()
+						.getContextPath();// 用户配置的上下文路径
+				// 根path
+				String[] basePaths = new String[] {
+						"/"
+				};
+				if (requestMapping != null)
+					basePaths = requestMapping.value();
+				for (int i = 0; i < basePaths.length; i++) {
+					basePaths[i] = contextPath + "" + basePaths[i];
+				}
+				String[] newPaths = basePaths;// 新path
+
 				Object controllerInstance = controllerClass.newInstance();
 				Method[] methods = controllerClass.getMethods();
 
 				for (Method method : methods) {
-
 					// 入参注解
 					Annotation[][] parameterAnnotations = method
 							.getParameterAnnotations();
@@ -122,7 +138,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 							}
 						}
 					}
-
+					// 返回值注解
 					ResponseBody responseBody = null;
 					if (method.getReturnType()
 							.isAssignableFrom(ResponseBody.class)
@@ -134,63 +150,82 @@ public class DispatcherVerticle extends AbstractVerticle {
 					}
 
 					// 方法注解
-					RequestMapping[] requestMappings = method
-							.getAnnotationsByType(RequestMapping.class);
-					if (requestMappings.length == 1) {// 如果方法包含RequestMapping注解映射之
-						RequestMapping requestMapping = requestMappings[0];
+					RequestMapping methodRequestMapping = method
+							.getAnnotation(RequestMapping.class);
 
-						// 路径正则表达式
-						if (!requestMapping.pathRegex().equals("")
-								&& requestMapping.routeWithRegex()
-										.equals("")) {
+					// 如果方法包含RequestMapping注解映射之
+					if (methodRequestMapping != null) {// 如果方法注解存在path,将base
+														// path与 method
+														// path进行排列组合，形成新的path
+						// 方法上的path
+						String[] methodPaths = methodRequestMapping.value();
+						// 新path数组的长度是base path长度乘以method path的长度
+						int newPathsLength = basePaths.length
+								* methodRequestMapping.value().length;
+						newPaths = new String[newPathsLength];
 
-							Route route = this.router.route()
-									.pathRegex(requestMapping.pathRegex());
-							this.handleController(controllerInstance,
-									method,
-									requestMapping, parameterAnnotations,
-
-									responseBody,
-									route);
+						// 将base path与 method path进行排列组合，形成新的path
+						for (String basePath : basePaths) {
+							for (String methodPath : methodPaths) {
+								newPaths[--newPathsLength] = (basePath
+										+ methodPath).replaceAll("[/]+", "/");
+							}
 						}
-						// 路由正则表达式
-						else if (requestMapping.pathRegex().equals("")
-								&& !requestMapping.routeWithRegex()
-										.equals("")) {
+						// 用方法注解替换类注解
+						requestMapping = methodRequestMapping;
+					}
 
-							Route route = this.router.routeWithRegex(
-									requestMapping.routeWithRegex());
+					// 路径正则表达式
+					if (!requestMapping.pathRegex().equals("")
+							&& requestMapping.routeWithRegex()
+									.equals("")) {
+
+						Route route = this.router.route()
+								.pathRegex(requestMapping.pathRegex());
+						this.handleController(controllerInstance,
+								method,
+								requestMapping, parameterAnnotations,
+
+								responseBody,
+								route);
+					}
+					// 路由正则表达式
+					else if (requestMapping.pathRegex().equals("")
+							&& !requestMapping.routeWithRegex()
+									.equals("")) {
+
+						Route route = this.router.routeWithRegex(
+								requestMapping.routeWithRegex());
+						this.handleController(controllerInstance,
+								method,
+								requestMapping, parameterAnnotations,
+								responseBody, route);
+					}
+					// 路径正则表达式 + 路由正则表达式
+					else if (!requestMapping.pathRegex().equals("")
+							&& !requestMapping.routeWithRegex()
+									.equals("")) {
+
+						Route route = this.router
+								.routeWithRegex(
+										requestMapping.routeWithRegex())
+								.pathRegex(requestMapping.pathRegex());
+						this.handleController(controllerInstance,
+								method,
+								requestMapping, parameterAnnotations,
+								responseBody, route);
+					}
+					// 普通路径
+					else {
+						for (String path : newPaths) {
+							Route route = this.router.route(path);
 							this.handleController(controllerInstance,
 									method,
-									requestMapping, parameterAnnotations,
+									requestMapping,
+									parameterAnnotations,
 									responseBody, route);
-						}
-						// 路径正则表达式 + 路由正则表达式
-						else if (!requestMapping.pathRegex().equals("")
-								&& !requestMapping.routeWithRegex()
-										.equals("")) {
-
-							Route route = this.router
-									.routeWithRegex(
-											requestMapping.routeWithRegex())
-									.pathRegex(requestMapping.pathRegex());
-							this.handleController(controllerInstance,
-									method,
-									requestMapping, parameterAnnotations,
-									responseBody, route);
-						}
-						// 普通路径
-						else {
-							for (String path : requestMapping.value()) {
-								Route route = this.router.route(path);
-								this.handleController(controllerInstance,
-										method,
-										requestMapping,
-										parameterAnnotations,
-										responseBody, route);
-							} // for
-						} // else
-					} // if
+						} // for
+					} // else
 				} // for
 			} // if
 		} catch (Exception e) {
