@@ -1,8 +1,12 @@
 package org.mermaid.vertxmvc;
 
+import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.ext.web.handler.sockjs.SockJSHandlerOptions;
 import io.vertx.reactivex.core.MultiMap;
 import io.vertx.reactivex.core.http.HttpServerFileUpload;
+import io.vertx.reactivex.ext.web.RoutingContext;
+import io.vertx.reactivex.ext.web.handler.sockjs.SockJSHandler;
 import org.mermaid.vertxmvc.annotation.Controller;
 import org.mermaid.vertxmvc.annotation.RequestBody;
 import org.mermaid.vertxmvc.annotation.RequestMapping;
@@ -99,26 +103,39 @@ public class TestController {
 		return map;
 	}
 
-//	@RequestMapping(value = "/ndy")
-//	public Handler<RoutingContext> myHandler() {
-//
-//		SockJSHandlerOptions options = new SockJSHandlerOptions()
-//				.setHeartbeatInterval(2000);
-//
-//		Handler sockJSHandler = SockJSHandler.create(VertxMvc.getVertx(),
-//				options);
-//		return sockJSHandler;
-//		// return routingContext -> {
-//		////
-//		//// HttpServerResponse response = routingContext.response();
-//		//// response.putHeader("content-type", "text/plain;charset=utf-8");
-//		//// response.end("你大爷\n");
-//		//// };
-//	}
+	@RequestMapping(value = "/ndy")
+	public Handler<RoutingContext> myHandler() {
+
+		SockJSHandlerOptions options = new SockJSHandlerOptions()
+				.setHeartbeatInterval(2000);
+
+		SockJSHandler sockJSHandler = SockJSHandler.create(VertxMvc.getVertx(),
+				options);
+		sockJSHandler.socketHandler(sockJSSocket -> sockJSSocket.handler(sockJSSocket::end));
+		return sockJSHandler;
+		// return routingContext -> {
+
+		// HttpServerResponse response = routingContext.response();
+		// response.putHeader("content-type", "text/plain;charset=utf-8");
+		// response.end("你大爷\n");
+		// };
+	}
 
 	@RequestMapping(value = "/ndy2", params = "a==2 && b==3")
 	public @ResponseBody
 	Map ndy2(Map map) {
+		return map;
+	}
+
+	@RequestMapping(value = "/",params = "a==1 && b==2")
+	public @ResponseBody
+	Map ndy3(Map map) {
+		return map;
+	}
+
+	@RequestMapping(value = "/",params = "a==3 && b==4")
+	public @ResponseBody
+	Map ndy4(Map map) {
 		return map;
 	}
 }

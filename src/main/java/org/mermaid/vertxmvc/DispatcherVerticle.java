@@ -295,9 +295,8 @@ public class DispatcherVerticle extends AbstractVerticle {
 		// 如果返回值是Handler且无参数
 		if (method.getReturnType().isAssignableFrom(Handler.class)
 				&& method.getParameterCount() == 0) {
-			this.router.route()
-					.handler((Handler<RoutingContext>) method
-							.invoke(controllerInstance, null));
+			route.handler((Handler<RoutingContext>) method
+					.invoke(controllerInstance, null));
 		} else {
 			// handler
 			route.handler(
@@ -344,7 +343,8 @@ public class DispatcherVerticle extends AbstractVerticle {
 							if (!"".equals(requestMapping.params())
 									&& !expressionEvaluator.evaluateBoolean(
 											requestMapping.params(), params)) {
-								response.setStatusCode(404).end();
+								routingContext.next();
+								// response.setStatusCode(404).end();
 								return;
 							}
 						} catch (OgnlException e) {
