@@ -11,6 +11,8 @@ import org.mermaid.vertxmvc.annotation.Controller;
 import org.mermaid.vertxmvc.annotation.RequestBody;
 import org.mermaid.vertxmvc.annotation.RequestMapping;
 import org.mermaid.vertxmvc.annotation.ResponseBody;
+import org.mermaid.vertxmvc.helpers.BlockingHelper;
+import org.mermaid.vertxmvc.helpers.EventBusHelper;
 
 import java.util.HashMap;
 import java.util.Map;

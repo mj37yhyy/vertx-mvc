@@ -1,4 +1,6 @@
-package org.mermaid.vertxmvc;
+package org.mermaid.vertxmvc.helpers;
+
+import org.mermaid.vertxmvc.VertxMvc;
 
 public class BlockingHelper {
 

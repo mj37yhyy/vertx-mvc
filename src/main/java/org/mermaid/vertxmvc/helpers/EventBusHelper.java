@@ -1,5 +1,6 @@
-package org.mermaid.vertxmvc;
+package org.mermaid.vertxmvc.helpers;
 
+import org.mermaid.vertxmvc.Container;
 import org.mermaid.vertxmvc.utils.JsonBinder;
 
 public class EventBusHelper {
