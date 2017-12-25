@@ -24,7 +24,7 @@ public class EventBusHelper {
 		Container.eventBus.<T> send(className + ":" + methodName,
 				binder.toJson(msg), replyHandler -> {
 					if (replyHandler.succeeded()) {
-						returnHandler.handler(replyHandler.result().body());
+						returnHandler.handle(replyHandler.result().body());
 					}
 				});
 	}
@@ -75,7 +75,7 @@ public class EventBusHelper {
 	 * @param <T>
 	 */
 	public interface ReturnHandler<T> {
-		void handler(T t);
+		void handle(T t);
 	}
 
 	/**
@@ -93,14 +93,14 @@ public class EventBusHelper {
 			MessageHandler<T> messageHandler,
 			Class<T> clazz) {
 		Container.eventBus.<T> consumer(name, message -> messageHandler
-				.handler(binder.fromJson(message.body().toString(), clazz)));
+				.handle(binder.fromJson(message.body().toString(), clazz)));
 	}
 
 	/**
 	 * 消息接口
 	 */
 	public interface MessageHandler<T> {
-		void handler(T t);
+		void handle(T t);
 	}
 
 	private static JsonBinder binder = JsonBinder.buildNormalBinder();

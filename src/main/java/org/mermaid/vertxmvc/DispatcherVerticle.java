@@ -237,7 +237,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 	 * 通用回复的回调接口
 	 */
 	interface ResponseHandler {
-		Object handler()
+		Object handle()
 				throws InvocationTargetException, IllegalAccessException;
 	}
 
@@ -250,7 +250,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 			ResponseHandler responseHandler) {
 		Object result;
 		try {
-			result = responseHandler.handler();
+			result = responseHandler.handle();
 			if (result != null) {
 				if (responseBody != null) {
 					response.end(
@@ -458,13 +458,13 @@ public class DispatcherVerticle extends AbstractVerticle {
 		try {
 			if (metadata.getAnnotationMetadata().hasAnnotation(
 					Service.class.getName())) {
-				Class<?> observableClass = loadClass(metadata);
-				for (Method method : observableClass.getMethods()) {
+				Class<?> serviceClass = loadClass(metadata);
+				for (Method method : serviceClass.getMethods()) {
 
 					// Observable
 					if (method.isAnnotationPresent(
 							org.mermaid.vertxmvc.annotation.Observable.class)) {// 如果包含Observable
-						Object observableInstance = observableClass
+						Object serviceInstance = serviceClass
 								.newInstance();
 						MessageConsumer<Object> consumer = Container.eventBus
 								.consumer(metadata.getClassMetadata()
@@ -479,7 +479,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 												.getParameterTypes().length == 0) {// 直接用方法的入参类型进行转换
 									msg.reply(binder
 											.toJson(method.invoke(
-													observableInstance,
+													serviceInstance,
 													(Object) null)));
 								} else if (method.getParameterTypes() != null
 										&& method
@@ -493,7 +493,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 									else
 										msg.reply(binder
 												.toJson(method.invoke(
-														observableInstance,
+														serviceInstance,
 														binder.fromJson(
 																(String) msg
 																		.body(),

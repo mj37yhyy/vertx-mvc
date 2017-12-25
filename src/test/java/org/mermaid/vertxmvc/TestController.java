@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Controller
-//@RequestMapping("/test")
+@RequestMapping("/test")
 public class TestController {
 
 	@RequestMapping("/test/:la")
@@ -112,7 +112,8 @@ public class TestController {
 
 		SockJSHandler sockJSHandler = SockJSHandler.create(VertxMvc.getVertx(),
 				options);
-		sockJSHandler.socketHandler(sockJSSocket -> sockJSSocket.handler(sockJSSocket::end));
+		sockJSHandler.socketHandler(
+				sockJSSocket -> sockJSSocket.handler(sockJSSocket::end));
 		return sockJSHandler;
 		// return routingContext -> {
 
@@ -128,33 +129,35 @@ public class TestController {
 		return map;
 	}
 
-	@RequestMapping(value = "/",params = "a==1 && b==2")
+	@RequestMapping(value = "/", params = "a==1 && b==2")
 	public @ResponseBody
 	Map ndy3(Map map) {
 		return map;
 	}
 
-	@RequestMapping(value = "/",params = "a==3 && b==4")
+	@RequestMapping(value = "/", params = "a==3 && b==4")
 	public @ResponseBody
 	Map ndy4(Map map) {
 		return map;
 	}
 
-	@RequestMapping(value = "/mtest",method = {
+	@RequestMapping(value = "/mtest", method = {
 			HttpMethod.GET
 	})
 	public @ResponseBody
 	Map m1(Map map) {
-		map.put("mtest","GET");
+		map.put("mtest", "GET");
 		return map;
 	}
 
-	@RequestMapping(value = "/mtest",method = {
+	@RequestMapping(value = "/mtest", method = {
 			HttpMethod.POST
 	})
 	public @ResponseBody
 	Map m2(Map map) {
-		map.put("mtest","POST");
+		map.put("mtest", "POST");
+		BlockingHelper.executeBlocking(() -> map, System.out::println);
+
 		return map;
 	}
 }
