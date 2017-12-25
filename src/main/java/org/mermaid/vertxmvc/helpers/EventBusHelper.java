@@ -1,6 +1,6 @@
 package org.mermaid.vertxmvc.helpers;
 
-import org.mermaid.vertxmvc.Container;
+import org.mermaid.vertxmvc.VertxMvc;
 import org.mermaid.vertxmvc.utils.JsonBinder;
 
 public class EventBusHelper {
@@ -22,7 +22,7 @@ public class EventBusHelper {
 			String methodName,
 			Object msg,
 			ReturnHandler<T> returnHandler) {
-		Container.eventBus.<T> send(className + ":" + methodName,
+		VertxMvc.getEventBus().<T> send(className + ":" + methodName,
 				binder.toJson(msg), replyHandler -> {
 					if (replyHandler.succeeded()) {
 						returnHandler.handle(replyHandler.result().body());
@@ -93,7 +93,7 @@ public class EventBusHelper {
 			String name,
 			MessageHandler<T> messageHandler,
 			Class<T> clazz) {
-		Container.eventBus.<T> consumer(name, message -> messageHandler
+		VertxMvc.getEventBus().<T> consumer(name, message -> messageHandler
 				.handle(binder.fromJson(message.body().toString(), clazz)));
 	}
 

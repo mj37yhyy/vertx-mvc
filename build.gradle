@@ -2,7 +2,7 @@ apply plugin: 'java'
 apply plugin: 'maven'
 
 group = 'org.mermaid'
-version = '0.0.7-SNAPSHOT'
+version = '0.0.8-SNAPSHOT'
 def artifactId = "vertx-mvc"
 
 description = """vertx-mvc"""
