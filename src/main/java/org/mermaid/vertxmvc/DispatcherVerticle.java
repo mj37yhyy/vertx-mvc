@@ -175,57 +175,55 @@ public class DispatcherVerticle extends AbstractVerticle {
 						requestMapping = methodRequestMapping;
 					}
 
-					// 路径正则表达式
-					if (!requestMapping.pathRegex().equals("")
-							&& requestMapping.routeWithRegex()
+					if (requestMapping != null) {
+						// 路径路由正则表达式
+						Route route;
+						if (!requestMapping.pathRegex().equals("")
+								|| !requestMapping.routeWithRegex()
+										.equals("")) {
+
+							logger.debug("pathRegex "
+									+ requestMapping.pathRegex()
+									+ ", routeWithRegex "
+									+ requestMapping.routeWithRegex() + " in "
+									+ metadata.getClassMetadata()
+											.getClassName()
+									+ "$" + method);
+
+							if (!requestMapping.routeWithRegex()
 									.equals("")) {
+								route = this.router.routeWithRegex(
+										requestMapping.routeWithRegex());
+								if (!requestMapping.pathRegex().equals("")) {
+									route = route.pathRegex(
+											requestMapping.pathRegex());
+								}
+							} else {
+								route = this.router.route()
+										.pathRegex(requestMapping.pathRegex());
+							}
 
-						Route route = this.router.route()
-								.pathRegex(requestMapping.pathRegex());
-						this.handleController(controllerInstance,
-								method,
-								requestMapping, parameterAnnotations,
-
-								responseBody,
-								route);
-					}
-					// 路由正则表达式
-					else if (requestMapping.pathRegex().equals("")
-							&& !requestMapping.routeWithRegex()
-									.equals("")) {
-
-						Route route = this.router.routeWithRegex(
-								requestMapping.routeWithRegex());
-						this.handleController(controllerInstance,
-								method,
-								requestMapping, parameterAnnotations,
-								responseBody, route);
-					}
-					// 路径正则表达式 + 路由正则表达式
-					else if (!requestMapping.pathRegex().equals("")
-							&& !requestMapping.routeWithRegex()
-									.equals("")) {
-
-						Route route = this.router
-								.routeWithRegex(
-										requestMapping.routeWithRegex())
-								.pathRegex(requestMapping.pathRegex());
-						this.handleController(controllerInstance,
-								method,
-								requestMapping, parameterAnnotations,
-								responseBody, route);
-					}
-					// 普通路径
-					else {
-						for (String path : newPaths) {
-							Route route = this.router.route(path);
 							this.handleController(controllerInstance,
 									method,
-									requestMapping,
-									parameterAnnotations,
+									requestMapping, parameterAnnotations,
 									responseBody, route);
-						} // for
-					} // else
+						}
+						// 普通路径
+						else {
+							for (String path : newPaths) {
+								logger.debug("path " + path + " in "
+										+ metadata.getClassMetadata()
+												.getClassName()
+										+ "$" + method);
+								route = this.router.route(path);
+								this.handleController(controllerInstance,
+										method,
+										requestMapping,
+										parameterAnnotations,
+										responseBody, route);
+							} // for
+						} // else
+					}
 				} // for
 			} // if
 		} catch (Exception e) {
@@ -373,7 +371,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 								.collect(Collectors.toMap(Map.Entry::getKey,
 										Map.Entry::getValue));
 
-						// 如果有参数且参数条件不匹配，直接返回404
+						// 如果有参数且参数条件不匹配，进入下一个路由
 						try {
 							if (!"".equals(requestMapping.params())
 									&& !expressionEvaluator.evaluateBoolean(
