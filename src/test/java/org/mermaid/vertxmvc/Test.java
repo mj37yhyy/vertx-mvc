@@ -37,13 +37,17 @@ public class Test {
 					}
 				}));
 
-
 	}
 
 	@org.junit.Test
 	public void test3() throws Exception {
-		System.out.println("//test/////s"
-				.replaceAll("[/]+","/"));
+		System.out.println(
+				new ExpressionEvaluator().evaluateBoolean(
+						"Action.equals(\"Exec\")", new HashMap<String, String>() {
+							{
+								put("Action", "Exec");
+							}
+						}));
 
 
 	}

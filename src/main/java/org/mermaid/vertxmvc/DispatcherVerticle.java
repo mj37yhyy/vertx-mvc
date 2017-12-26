@@ -12,14 +12,15 @@ import io.vertx.reactivex.ext.web.Route;
 import io.vertx.reactivex.ext.web.Router;
 import io.vertx.reactivex.ext.web.RoutingContext;
 import io.vertx.reactivex.ext.web.handler.BodyHandler;
+import io.vertx.reactivex.ext.web.handler.StaticHandler;
 import ognl.OgnlException;
-import org.apache.commons.beanutils.BeanUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mermaid.vertxmvc.annotation.*;
 import org.mermaid.vertxmvc.classreading.Metadata;
 import org.mermaid.vertxmvc.utils.JsonBinder;
 import org.mermaid.vertxmvc.utils.ognl.ExpressionEvaluator;
+import org.mermaid.vertxmvc.utils.ognl.OgnlCache;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -66,7 +67,11 @@ public class DispatcherVerticle extends AbstractVerticle {
 
 	private void initController() {
 		this.router = Router.router(vertx);
+
 		Container.metadataSet.forEach(this::initController);// 循环映射
+
+		this.router.route("/*").handler(StaticHandler.create());// 静态资源映射
+
 		// 兜底结束
 		this.router.route()
 				.handler(routingContext -> routingContext
@@ -211,10 +216,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 						// 普通路径
 						else {
 							for (String path : newPaths) {
-								logger.debug("path " + path + " in "
-										+ metadata.getClassMetadata()
-												.getClassName()
-										+ "$" + method);
+								logger.debug("path " + path + " in " + method);
 								route = this.router.route(path);
 								this.handleController(controllerInstance,
 										method,
@@ -370,6 +372,10 @@ public class DispatcherVerticle extends AbstractVerticle {
 								.params().getDelegate().entries().stream()
 								.collect(Collectors.toMap(Map.Entry::getKey,
 										Map.Entry::getValue));
+						// request.headers() 转换成 Map
+						Map<String, String> headers  = request.headers().getDelegate().entries().stream()
+								.collect(Collectors.toMap(Map.Entry::getKey,
+										Map.Entry::getValue));
 
 						// 如果有参数且参数条件不匹配，进入下一个路由
 						try {
@@ -425,13 +431,18 @@ public class DispatcherVerticle extends AbstractVerticle {
 									} else {// 如果是javabean,进行转换
 										Object parameterTypeInstance = parameterTypeClass
 												.newInstance();
-										try {
-											BeanUtils.populate(
-													parameterTypeInstance,
-													params);
-										} catch (IllegalAccessException e) {
-											logger.error("无法赋值");
-										}
+										// BeanUtils.populate(
+										// parameterTypeInstance,
+										// params);
+										params.forEach((K, V) -> {
+											try {
+												OgnlCache.setValue(K,
+														parameterTypeInstance,
+														V);
+											} catch (OgnlException e) {
+												logger.debug("无法赋值", e);
+											}
+										});
 										args.add(parameterTypeInstance);
 									}
 								}

@@ -32,6 +32,11 @@ public class OgnlCache {
 
 	private static final Map<String, Node> expressionCache = new ConcurrentHashMap<String, Node>();
 
+	public static void setValue(String expression, Object root, Object value)
+			throws OgnlException {
+		Ognl.setValue(parseExpression(expression), root, value);
+	}
+
 	public static Object getValue(String expression, Object root)
 			throws OgnlException {
 		return Ognl.getValue(parseExpression(expression), root);

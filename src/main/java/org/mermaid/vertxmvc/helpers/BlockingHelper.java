@@ -5,11 +5,11 @@ import org.mermaid.vertxmvc.VertxMvc;
 public class BlockingHelper {
 
 	public static void executeBlocking(
-			BlockingCodeHandler blockingCodeHandler,
+			BlockingCodeDataHandler blockingCodeDataHandler,
 			BlockingResultHandler blockingResultHandler) {
 
 		VertxMvc.getVertx().executeBlocking(
-				future -> future.complete(blockingCodeHandler.handle()),
+				future -> future.complete(blockingCodeDataHandler.handle()),
 				res -> blockingResultHandler.handle(res.result()));
 	}
 
@@ -21,8 +21,12 @@ public class BlockingHelper {
 				res -> {});
 	}
 
-	public interface BlockingCodeHandler<T> {
+	public interface BlockingCodeDataHandler<T> {
 		T handle();
+	}
+
+	public interface BlockingCodeHandler<T> {
+		void handle();
 	}
 
 	public interface BlockingResultHandler<T> {

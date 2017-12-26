@@ -143,6 +143,12 @@ public class TestController {
 		return map;
 	}
 
+	@RequestMapping(value = "/", params = "Action==Exec")
+	public @ResponseBody
+	Map ndy5(Map map) {
+		return map;
+	}
+
 	@RequestMapping(value = "/mtest", method = {
 			HttpMethod.GET
 	})
