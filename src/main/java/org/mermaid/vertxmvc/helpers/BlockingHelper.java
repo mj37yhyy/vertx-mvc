@@ -13,6 +13,14 @@ public class BlockingHelper {
 				res -> blockingResultHandler.handle(res.result()));
 	}
 
+	public static void executeBlocking(
+			BlockingCodeHandler blockingCodeHandler) {
+
+		VertxMvc.getVertx().executeBlocking(
+				future -> blockingCodeHandler.handle(),
+				res -> {});
+	}
+
 	public interface BlockingCodeHandler<T> {
 		T handle();
 	}
