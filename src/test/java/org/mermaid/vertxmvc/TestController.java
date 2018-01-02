@@ -7,13 +7,11 @@ import io.vertx.reactivex.core.MultiMap;
 import io.vertx.reactivex.core.http.HttpServerFileUpload;
 import io.vertx.reactivex.ext.web.RoutingContext;
 import io.vertx.reactivex.ext.web.handler.sockjs.SockJSHandler;
-import org.mermaid.vertxmvc.annotation.Controller;
-import org.mermaid.vertxmvc.annotation.RequestBody;
-import org.mermaid.vertxmvc.annotation.RequestMapping;
-import org.mermaid.vertxmvc.annotation.ResponseBody;
+import org.mermaid.vertxmvc.annotation.*;
 import org.mermaid.vertxmvc.helpers.BlockingHelper;
 import org.mermaid.vertxmvc.helpers.EventBusHelper;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -167,5 +165,16 @@ public class TestController {
 		BlockingHelper.executeBlocking(() -> map, System.out::println);
 
 		return map;
+	}
+
+	@RequestMapping(value = "/ndy3")
+	public @ResponseBody
+	Map ndy3(@RequestParam("a")
+	Date date) {
+		return new HashMap() {
+			{
+				put("date", date);
+			}
+		};
 	}
 }

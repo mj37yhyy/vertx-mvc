@@ -13,11 +13,15 @@ import io.vertx.reactivex.ext.web.Router;
 import io.vertx.reactivex.ext.web.RoutingContext;
 import io.vertx.reactivex.ext.web.handler.BodyHandler;
 import io.vertx.reactivex.ext.web.handler.StaticHandler;
+import ognl.DefaultTypeConverter;
+import ognl.Ognl;
 import ognl.OgnlException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mermaid.vertxmvc.annotation.*;
 import org.mermaid.vertxmvc.classreading.Metadata;
+import org.mermaid.vertxmvc.converters.Converter;
+import org.mermaid.vertxmvc.converters.WebDataBinder;
 import org.mermaid.vertxmvc.utils.JsonBinder;
 import org.mermaid.vertxmvc.utils.ognl.ExpressionEvaluator;
 import org.mermaid.vertxmvc.utils.ognl.OgnlCache;
@@ -373,7 +377,8 @@ public class DispatcherVerticle extends AbstractVerticle {
 								.collect(Collectors.toMap(Map.Entry::getKey,
 										Map.Entry::getValue));
 						// request.headers() 转换成 Map
-						Map<String, String> headers  = request.headers().getDelegate().entries().stream()
+						Map<String, String> headers = request.headers()
+								.getDelegate().entries().stream()
 								.collect(Collectors.toMap(Map.Entry::getKey,
 										Map.Entry::getValue));
 
@@ -391,6 +396,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 						}
 
 						try {
+							Map context = this.getOgnlContext();
 							List<Object> args = new ArrayList<>();
 							for (int i = 0; i < method
 									.getParameterTypes().length; i++) {
@@ -412,7 +418,40 @@ public class DispatcherVerticle extends AbstractVerticle {
 																.getBody(),
 														parameterTypeClass));
 										isAdded = true;
-										break;
+									}
+									// 如果是RequestParam
+									else if (annotation.annotationType()
+											.isAssignableFrom(
+													RequestParam.class)) {
+										String paramName = ((RequestParam) annotation)
+												.value();
+										String formalParamValue = request
+												.getParam(paramName);
+										if (formalParamValue == null) {
+											formalParamValue = ((RequestParam) annotation)
+													.defaultValue();
+										}
+										args.add(this.getValue(
+												parameterTypeClass,
+												formalParamValue));
+										isAdded = true;
+									}
+									// 如果是RequestParam
+									else if (annotation.annotationType()
+											.isAssignableFrom(
+													RequestHeader.class)) {
+										String headerName = ((RequestHeader) annotation)
+												.value();
+										String formalHeaderValue = request
+												.getHeader(headerName);
+										if (formalHeaderValue == null) {
+											formalHeaderValue = ((RequestHeader) annotation)
+													.defaultValue();
+										}
+										args.add(this.getValue(
+												parameterTypeClass,
+												formalHeaderValue));
+										isAdded = true;
 									}
 								}
 								if (!isAdded) {
@@ -436,7 +475,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 										// params);
 										params.forEach((K, V) -> {
 											try {
-												OgnlCache.setValue(K,
+												OgnlCache.setValue(K, context,
 														parameterTypeInstance,
 														V);
 											} catch (OgnlException e) {
@@ -457,6 +496,72 @@ public class DispatcherVerticle extends AbstractVerticle {
 						// }
 					});
 		}
+	}
+
+	/**
+	 * 生成OgnlContext。增加Converter
+	 * 
+	 * @return Map Context
+	 */
+	private Map getOgnlContext() {
+		Map context = Ognl
+				.createDefaultContext(
+						this);
+		Ognl.setTypeConverter(context,
+				new DefaultTypeConverter() {
+
+					// 重载父类方法
+					public Object convertValue(
+							Map context,
+							Object value,
+							Class toType) {
+						Object result = null;
+						Map<Class, Converter> customConverter = WebDataBinder
+								.getCustomConverter();
+						// 先循环自己的Converter
+						for (Map.Entry<Class, Converter> entry : customConverter
+								.entrySet()) {
+
+							if (toType == entry
+									.getKey()) {
+								result = entry
+										.getValue()
+										.convert(
+												(String) value);
+								break;
+							}
+						}
+						// 如果为空，则使用默认的
+						if (result == null) {
+							result = super.convertValue(
+									context,
+									value,
+									toType);
+						}
+						return result;
+					}
+				});
+		return context;
+	}
+
+	/**
+	 * 获取转换后的值
+	 * 
+	 * @param parameterTypeClass
+	 *            参数类型
+	 * @param formalValue
+	 *            形参的值
+	 * @return 装换后的值
+	 */
+	private Object getValue(Class<?> parameterTypeClass, String formalValue) {
+		Object value = formalValue;
+		Converter converter = WebDataBinder
+				.getCustomConverter()
+				.get(parameterTypeClass);
+		if (converter != null)
+			value = converter
+					.convert(formalValue);
+		return value;
 	}
 
 	/**

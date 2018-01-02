@@ -37,6 +37,15 @@ public class OgnlCache {
 		Ognl.setValue(parseExpression(expression), root, value);
 	}
 
+	public static void setValue(
+			String expression,
+			Map context,
+			Object root,
+			Object value)
+			throws OgnlException {
+		Ognl.setValue(parseExpression(expression), context, root, value);
+	}
+
 	public static Object getValue(String expression, Object root)
 			throws OgnlException {
 		return Ognl.getValue(parseExpression(expression), root);
