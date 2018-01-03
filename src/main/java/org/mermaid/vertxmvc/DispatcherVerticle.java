@@ -12,6 +12,7 @@ import io.vertx.reactivex.ext.web.Route;
 import io.vertx.reactivex.ext.web.Router;
 import io.vertx.reactivex.ext.web.RoutingContext;
 import io.vertx.reactivex.ext.web.handler.BodyHandler;
+import io.vertx.reactivex.ext.web.handler.CookieHandler;
 import io.vertx.reactivex.ext.web.handler.StaticHandler;
 import ognl.DefaultTypeConverter;
 import ognl.Ognl;
@@ -71,6 +72,8 @@ public class DispatcherVerticle extends AbstractVerticle {
 
 	private void initController() {
 		this.router = Router.router(vertx);
+
+		this.router.route().handler(CookieHandler.create());// cookie
 
 		Container.metadataSet.forEach(this::initController);// 循环映射
 
@@ -377,10 +380,12 @@ public class DispatcherVerticle extends AbstractVerticle {
 								.collect(Collectors.toMap(Map.Entry::getKey,
 										Map.Entry::getValue));
 						// request.headers() 转换成 Map
-						/*Map<String, String> headers = request.headers()
-								.getDelegate().entries().stream()
-								.collect(Collectors.toMap(Map.Entry::getKey,
-										Map.Entry::getValue));*/
+						/*
+						 * Map<String, String> headers = request.headers()
+						 * .getDelegate().entries().stream()
+						 * .collect(Collectors.toMap(Map.Entry::getKey,
+						 * Map.Entry::getValue));
+						 */
 
 						// 如果有参数且参数条件不匹配，进入下一个路由
 						try {
@@ -438,7 +443,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 										isAdded = true;
 										break;
 									}
-									// 如果是RequestParam
+									// 如果是RequestHeader
 									else if (annotation.annotationType()
 											.isAssignableFrom(
 													RequestHeader.class)) {
@@ -453,6 +458,25 @@ public class DispatcherVerticle extends AbstractVerticle {
 										args.add(this.getValue(
 												parameterTypeClass,
 												formalHeaderValue));
+										isAdded = true;
+										break;
+									}
+									// 如果是CookieValue
+									else if (annotation.annotationType()
+											.isAssignableFrom(
+													CookieValue.class)) {
+										String cookieName = ((CookieValue) annotation)
+												.value();
+										String formalCookieValue = routingContext
+												.getCookie(cookieName)
+												.getValue();
+										if (formalCookieValue == null) {
+											formalCookieValue = ((CookieValue) annotation)
+													.defaultValue();
+										}
+										args.add(this.getValue(
+												parameterTypeClass,
+												formalCookieValue));
 										isAdded = true;
 										break;
 									}
