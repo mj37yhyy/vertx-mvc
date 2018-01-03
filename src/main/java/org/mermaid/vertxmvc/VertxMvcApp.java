@@ -8,11 +8,26 @@ import java.util.Date;
 public class VertxMvcApp {
 
 	public static void run() {
-		WebDataBinder.registerCustomConverter(Date.class,
-				new DateRequestConverter());
-
-		Container container = new Container();
-		container.initialization();
-		container.startServer();
+		run(null);
 	}
+
+	public static void run(VertxMvcAppConfig config) {
+		WebDataBinder webDataBinder = new WebDataBinder();
+		defaultBinder(webDataBinder);
+		if (config != null)
+			config.initBinder(webDataBinder);
+
+		new Container() {
+			{
+				initialization();
+				startServer();
+			}
+		};
+	}
+
+	private static void defaultBinder(WebDataBinder webDataBinder) {
+		webDataBinder.registerCustomConverter(Date.class,
+				new DateRequestConverter());
+	}
+
 }

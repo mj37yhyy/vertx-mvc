@@ -5,7 +5,7 @@ import java.util.Map;
 
 public class WebDataBinder {
 
-	public static void registerCustomConverter(
+	public void registerCustomConverter(
 			Class clazz,
 			Converter converter) {
 		customConverter.put(clazz, converter);
