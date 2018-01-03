@@ -377,10 +377,10 @@ public class DispatcherVerticle extends AbstractVerticle {
 								.collect(Collectors.toMap(Map.Entry::getKey,
 										Map.Entry::getValue));
 						// request.headers() 转换成 Map
-						Map<String, String> headers = request.headers()
+						/*Map<String, String> headers = request.headers()
 								.getDelegate().entries().stream()
 								.collect(Collectors.toMap(Map.Entry::getKey,
-										Map.Entry::getValue));
+										Map.Entry::getValue));*/
 
 						// 如果有参数且参数条件不匹配，进入下一个路由
 						try {
@@ -418,6 +418,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 																.getBody(),
 														parameterTypeClass));
 										isAdded = true;
+										break;
 									}
 									// 如果是RequestParam
 									else if (annotation.annotationType()
@@ -435,6 +436,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 												parameterTypeClass,
 												formalParamValue));
 										isAdded = true;
+										break;
 									}
 									// 如果是RequestParam
 									else if (annotation.annotationType()
@@ -452,6 +454,7 @@ public class DispatcherVerticle extends AbstractVerticle {
 												parameterTypeClass,
 												formalHeaderValue));
 										isAdded = true;
+										break;
 									}
 								}
 								if (!isAdded) {
